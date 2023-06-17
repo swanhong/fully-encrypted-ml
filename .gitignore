@@ -1,0 +1,32 @@
+# Compiled files
+/target/
+
+# Generated documentation
+/doc/
+
+# Dependency directories
+/dependencies/
+
+# Crate files
+Cargo.lock
+
+# Editor-specific files
+.vscode/
+.idea/
+*.swp
+
+# Build artifacts
+*.o
+*.a
+
+# Executables
+*.exe
+*.out
+
+# Log files
+*.log
+
+# macOS-specific files
+.DS_Store
+
+*.txt
