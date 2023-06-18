@@ -30,7 +30,7 @@ pub fn dcr_setup(dim: usize, sk_bound: Integer, grp: &Group) -> (Vec<Integer>, V
     (sk, pk)
 }
 
-pub fn dcr_keygen(sk: &Vec<Integer>, y: &Vec<Integer>, grp: &Group) -> Integer {
+pub fn dcr_keygen(sk: &Vec<Integer>, y: &Vec<Integer>) -> Integer {
     // sk_y = inner product between sk and y
     let mut sk_y = Integer::from(0);
     for i in 0..sk.len() {

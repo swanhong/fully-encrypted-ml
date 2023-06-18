@@ -45,7 +45,7 @@ mod test {
     // println!("pk: {:?}", pk);
 
     let start = Instant::now();
-    let sk_y = dcr_keygen(&sk, &y, &grp);
+    let sk_y = dcr_keygen(&sk, &y);
     let end = start.elapsed();
     println!("Time elapsed in dcr_keygen is: {:?}", end);
     // println!("sk_y: {}", sk_y);

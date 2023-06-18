@@ -9,16 +9,15 @@ use crate::util::group::Group;
 use crate::util::group::discrete_logarithm;
 use crate::util::matrix::*;
 use crate::util::vector::*;
-use super::keys::IPE_sk;
+use super::keys::IpeSk;
 
-pub fn ipe_setup(group: &Group, dim: usize, b: usize) -> IPE_sk {
-    IPE_sk::new(dim, b, group)
+pub fn ipe_setup(group: &Group, dim: usize, b: usize, rng: &mut RandState<'_>) -> IpeSk {
+    IpeSk::new(dim, b, group, rng)
 }
 
 
-pub fn ipe_keygen(sk: &IPE_sk, y: &Vec<Integer>, grp: &Group) -> Vec<Integer> {
-    let mut val = Integer::new();
-    let mut val2 = Integer::new();
+pub fn ipe_keygen(sk: &IpeSk, y: &Vec<Integer>, grp: &Group) -> Vec<Integer> {
+    let mut val;
     let mod_val = grp.delta.clone();
     
     let mut u_t_y_left = Vec::with_capacity(sk.u_t.rows);
@@ -37,11 +36,6 @@ pub fn ipe_keygen(sk: &IPE_sk, y: &Vec<Integer>, grp: &Group) -> Vec<Integer> {
     u_t_y.extend_from_slice(&u_t_y_left);
     u_t_y.extend_from_slice(y);
 
-    println!("sk->u_t = {}", sk.u_t);
-    println!("y = {:?}", y);
-    println!("u_t_y_left = {:?}", u_t_y_left);
-    println!("u_t_y = {:?}", u_t_y);
-
     // sk_f_mat = (sk->D_inv_left + sk->D_inv_right * sk->U) * u_t_y
     let mut left = Matrix::new(1, u_t_y.len());
     for i in 0..u_t_y.len() {
@@ -49,11 +43,8 @@ pub fn ipe_keygen(sk: &IPE_sk, y: &Vec<Integer>, grp: &Group) -> Vec<Integer> {
         left.set(0, i, val.clone());
     }
 
-    let mut sk_f_mat = (left * &sk.d) % &mod_val;
+    let sk_f_mat = (left * &sk.d) % &mod_val;
 
-    println!("sk_f_mat = {}", sk_f_mat);
-
-    
     let sk_f_col = sk_f_mat.get_row(0);
 
     // let mut sk_f: Vec<Integer> = Vec::new();
@@ -77,7 +68,44 @@ pub fn ipe_keygen(sk: &IPE_sk, y: &Vec<Integer>, grp: &Group) -> Vec<Integer> {
     sk_f
 }
 
-pub fn ipe_enc_matrix_expression(sk: &IPE_sk, grp: &Group, mult_mu: bool, rand: &mut RandState<'_>) -> Matrix {
+pub fn ipe_enc(
+    sk: &IpeSk,
+    x: &Vec<Integer>,
+    grp: &Group,
+    mult_mu: bool,
+    rng: &mut RandState<'_>,
+) -> Vec<Integer> {
+    let mod_val = grp.delta.clone();
+    let r = mod_val.clone().random_below(rng);
+
+    let rand = gen_random_vector(sk.d_perp.cols, &mod_val, rng);
+    let mut d_perp_rand = sk.d_perp.mul_vec(&rand);
+    vec_mod(&mut d_perp_rand, &mod_val);
+
+    let mut x_mu = if mult_mu {
+        vec_mul_scalar(x, &grp.mu)
+    } else {
+        x.to_vec()
+    };
+    vec_mod(&mut x_mu, &mod_val);
+
+    let right = vec_mul_scalar(&sk.a, &r);
+    let mut right2 = sk.u.mul_vec(&sk.a);
+    right2 = vec_mul_scalar(&right2, &r);
+    right2 = vec_add(&right2, &x_mu);
+
+    let mut right_joined = Vec::new();
+    right_joined.extend(right);
+    right_joined.extend(right2);
+
+    let mut ctxt = sk.d_inv.mul_vec(&right_joined);
+    ctxt = vec_add(&ctxt, &d_perp_rand);
+    vec_mod(&mut ctxt, &mod_val);
+
+    ctxt
+}
+
+pub fn ipe_enc_matrix_expression(sk: &IpeSk, grp: &Group, mult_mu: bool, rand: &mut RandState<'_>) -> Matrix {
     let mod_val = grp.delta.clone();
     let r = mod_val.clone().random_below(rand);
 
@@ -89,11 +117,11 @@ pub fn ipe_enc_matrix_expression(sk: &IPE_sk, grp: &Group, mult_mu: bool, rand: 
     let d_perp_rand = sk.d_perp.clone() * rvec;
 
     // tmp = sk1 * r
-    let tmp = mul_vec_scalar(&sk.sk1, &r);
+    let tmp = vec_mul_scalar(&sk.sk1, &r);
 
     // x_b = D_perp_rand + sk1 * r
-    let mut enc_x_b = add_vec(&d_perp_rand, &tmp);
-    mod_vec(&mut enc_x_b, &mod_val);
+    let mut enc_x_b = vec_add(&d_perp_rand, &tmp);
+    vec_mod(&mut enc_x_b, &mod_val);
 
     let sk_enc_mu = if mult_mu {
         let mut sk_enc_mu = sk.sk_enc.clone();
@@ -104,8 +132,6 @@ pub fn ipe_enc_matrix_expression(sk: &IPE_sk, grp: &Group, mult_mu: bool, rand: 
         sk.sk_enc.clone()
     };
 
-    println!("sk_enc_mu size = {} x {}", sk_enc_mu.rows, sk_enc_mu.cols);
-    println!("enc_x_b len = {}", enc_x_b.len());
     let mut ipe_enc_mat = concatenate_vec_col(&sk_enc_mu, &enc_x_b);
     ipe_enc_mat.mod_inplace(&mod_val);
 
@@ -114,7 +140,7 @@ pub fn ipe_enc_matrix_expression(sk: &IPE_sk, grp: &Group, mult_mu: bool, rand: 
 
 pub fn ipe_dec(sk_f: &Vec<Integer>, ctxt: &Vec<Integer>, grp: &Group, solve_dl: bool) -> Integer {
     let mut out = vec_inner_pow(&sk_f, &ctxt, &grp);
-    println!("out before dl = {}", out);
+    println!("out in ipe_dec = {}", out);
     if solve_dl {
         out = discrete_logarithm(out.clone(), &grp);
     }

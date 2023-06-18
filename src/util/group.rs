@@ -19,10 +19,10 @@ pub struct Group {
 impl Group {
     // A constructor method
     pub fn new(bit_len: u64) -> Group {
-        let p;
-        let q;
+        let mut p;
+        let mut q;
         if bit_len == 10 {
-            p = Integer::from(107);
+            p = Integer::from(101);
             q = Integer::from(83);
         }else if bit_len == 100 {
             p = Integer::from_str_radix("6122421090493547576937037317561418841225758554253106999", 10).unwrap();
@@ -34,12 +34,14 @@ impl Group {
             p = Integer::from_str_radix("863", 10).unwrap();
             q = Integer::from_str_radix("859", 10).unwrap();
         }
+        
         let n = p.clone() * q.clone();
         let n_sq = n.clone().square();
         let n_root = n.clone().root(2);
         let mut g = n_sq.clone();
         let mut rand = RandState::new();
         g = g.clone().random_below(&mut rand);
+        
         
         let phi_n: Integer = (p.clone() - 1) * (q.clone() - 1);
         let delta = n.clone() * phi_n.clone();
@@ -85,5 +87,9 @@ impl fmt::Display for Group {
 }
 
 pub fn discrete_logarithm(x: Integer, grp: &Group) -> Integer {
-    (x - 1) / grp.n.clone()
+    let x_m1 = x.clone() - Integer::from(1);
+    let (quo, rem) = x_m1.div_rem_euc(grp.n.clone());
+    // (x - 1) / grp.n.clone()
+    println!("quo = {}, rem = {}", quo, rem);
+    quo
 }

@@ -1,6 +1,6 @@
-use ndarray::Array2;
 use rug::{Integer, rand::RandState};
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::str::FromStr;
 
 #[derive(Clone, Debug)]
 pub struct Matrix {
@@ -18,18 +18,42 @@ impl Matrix {
         }
     }
 
-    // random matrix with size rows x cols and elements in 0..bound
-    pub fn random(rows: usize, cols: usize, bound: &Integer) -> Matrix {
+    pub fn parse_matrix(input: &str) -> Matrix {
+        let lines: Vec<&str> = input.trim().split('\n').collect();
+        let rows = lines.len() - 2;
+        let cols = lines[1]
+            .trim_matches(|c: char| !c.is_digit(10))
+            .split_whitespace()
+            .count();
+    
         let mut matrix = Matrix::new(rows, cols);
-        let mut rng = RandState::new();
-        let d = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("Duration since UNIX_EPOCH failed")
-            .as_secs();
-        rng.seed(&Integer::from(d));
+        println!("row, col = {}, {}", rows, cols);
+    
+        for (i, line) in lines.iter().enumerate() {
+            let values: Vec<Integer> = line
+                .trim_matches(|c: char| !c.is_digit(10))
+                .split_whitespace()
+                .map(|value| {
+                    Integer::from_str(value).unwrap_or_else(|_| {
+                        panic!("Failed to parse integer value: '{}'", value);
+                    })
+                })
+                .collect();
+            if i > 0 && i < rows + 1 {
+                matrix.set_row(i-1, &values);
+            }
+        }
+    
+        matrix
+    }
+
+    // random matrix with size rows x cols and elements in 0..bound
+    pub fn random(rows: usize, cols: usize, bound: &Integer, rng: &mut RandState<'_>) -> Matrix {
+        let mut matrix = Matrix::new(rows, cols);
+
         for i in 0..rows {
             for j in 0..cols {
-                matrix.set(i, j, bound.clone().random_below(&mut rng));
+                matrix.set(i, j, bound.clone().random_below(rng));
             }
         }
         matrix
@@ -66,6 +90,22 @@ impl Matrix {
         assert!(row < self.rows);
         assert!(col < self.cols);
         self.data[row * self.cols + col] = value;
+    }
+
+    pub fn set_row(&mut self, row: usize, values: &Vec<Integer>) {
+        assert!(row < self.rows);
+        assert!(values.len() == self.cols);
+        for j in 0..self.cols {
+            self.set(row, j, values[j].clone());
+        }
+    }
+
+    pub fn set_col(&mut self, col: usize, values: &Vec<Integer>) {
+        assert!(col < self.cols);
+        assert!(values.len() == self.rows);
+        for i in 0..self.rows {
+            self.set(i, col, values[i].clone());
+        }
     }
 
     pub fn rows(&self) -> usize {
@@ -179,6 +219,16 @@ impl Matrix {
         matrix
     }
 
+    pub fn transpose(&self) -> Matrix {
+        let mut matrix = Matrix::new(self.cols, self.rows);
+        for i in 0..self.rows {
+            for j in 0..self.cols {
+                matrix.set(j, i, self.get(i, j));
+            }
+        }
+        matrix
+    }
+
     pub fn mul_vec(&self, vec: &Vec<Integer>) -> Vec<Integer> {
         assert!(self.cols == vec.len());
         let mut result = Vec::new();
@@ -190,6 +240,57 @@ impl Matrix {
             result.push(val);
         }
         result
+    }
+
+    pub fn tensor_product(a: &Matrix, b: &Matrix, p: &Integer) -> Matrix {
+        let mut out = Matrix::new(a.rows * b.rows, a.cols * b.cols);
+
+        for i in 0..a.rows {
+            for j in 0..a.cols {
+                for m in 0..b.rows {
+                    for n in 0..b.cols {
+                        let val1 = a.get(i, j);
+                        let val2 = b.get(m, n);
+                        // let val = val1 * val2 % p;
+                        let val = val1.clone() * val2.clone() % p;
+                        out.set(i * b.rows + m, j * b.cols + n, val);
+                    }
+                }
+            }
+        }
+        out
+    }
+
+    pub fn tensor_product_vec_left(vec: &Vec<Integer>, mat: &Matrix, p: &Integer) -> Matrix {
+        let mut out = Matrix::new(vec.len() * mat.rows, mat.cols);
+
+        for i in 0..vec.len() {
+            for j in 0..mat.rows {
+                for m in 0..mat.cols {
+                    let val1 = vec[i].clone();
+                    let val2 = mat.get(j, m);
+                    let val = val1 * val2 % p;
+                    out.set(i * mat.rows + j, m, val);
+                }
+            }
+        }
+        out
+    }
+
+    pub fn tensor_product_vec_right(mat: &Matrix, vec: &Vec<Integer>, p: &Integer) -> Matrix {
+        let mut out = Matrix::new(mat.rows * vec.len(), mat.cols);
+
+        for i in 0..mat.rows {
+            for j in 0..mat.cols {
+                let val_mat = mat.get(i, j);
+                for m in 0..vec.len() {
+                    let val_vec = vec[m].clone();
+                    let val = val_mat.clone() * val_vec % p;
+                    out.set(i * vec.len() + m, j, val);
+                }
+            }
+        }
+        out
     }
 }
 
@@ -421,8 +522,6 @@ pub fn concatenate_vec_col(a: &Matrix, b: &Vec<Integer>) -> Matrix {
         for j in 0..a.cols {
             result.set(i, j, a.get(i, j));
         }
-    }
-    for i in 0..b.len() {
         result.set(i, a.cols, b[i].clone());
     }
     result
@@ -470,6 +569,7 @@ pub fn generate_right_inverse_space(
     row: usize,
     col: usize,
     modulus: &Integer,
+    rng: &mut RandState<'_>,
 ) -> (Matrix, Matrix, Matrix) {
     // variables for randomness
     let mut rng = RandState::new();
@@ -512,7 +612,7 @@ pub fn generate_right_inverse_space(
     a_inv %= modulus;
 
     let n_upper = Matrix::new(row, row);
-    let n_lower = Matrix::random(col - row, row, modulus);
+    let n_lower = Matrix::random(col - row, row, modulus, &mut rng);
     let n = concatenate_row(&n_upper, &n_lower);
 
     let mut null = u_inv * n;

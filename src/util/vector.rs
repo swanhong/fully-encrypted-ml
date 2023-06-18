@@ -18,7 +18,7 @@ pub fn gen_random_vector(dim: usize, bound: &Integer, rand: &mut RandState<'_>) 
     vec
 }
 
-pub fn mul_vec_scalar(vec: &Vec<Integer>, scalar: &Integer) -> Vec<Integer> {
+pub fn vec_mul_scalar(vec: &Vec<Integer>, scalar: &Integer) -> Vec<Integer> {
     let mut res = vec![Integer::from(0); vec.len()];
     for i in 0..vec.len() {
         res[i] = vec[i].clone() * scalar.clone();
@@ -26,7 +26,7 @@ pub fn mul_vec_scalar(vec: &Vec<Integer>, scalar: &Integer) -> Vec<Integer> {
     res
 }
 
-pub fn add_vec(vec1: &Vec<Integer>, vec2: &Vec<Integer>) -> Vec<Integer> {
+pub fn vec_add(vec1: &Vec<Integer>, vec2: &Vec<Integer>) -> Vec<Integer> {
     assert!(vec1.len() == vec2.len());
     let mut res = vec![Integer::from(0); vec1.len()];
     for i in 0..vec1.len() {
@@ -35,7 +35,7 @@ pub fn add_vec(vec1: &Vec<Integer>, vec2: &Vec<Integer>) -> Vec<Integer> {
     res
 }
 
-pub fn mod_vec(vec: &mut Vec<Integer>, modulus: &Integer) {
+pub fn vec_mod(vec: &mut Vec<Integer>, modulus: &Integer) {
     for i in 0..vec.len() {
         vec[i] = vec[i].clone().div_rem_euc(modulus.clone()).1;
     }
@@ -54,4 +54,23 @@ pub fn vec_inner_pow(v_base: &Vec<Integer>, v_exp: &Vec<Integer>, grp: &Group) -
         }
     }
     out
+}
+
+pub fn vec_exp_with_base(base: &Integer, v_exp: &Vec<Integer>, modulo: &Integer) -> Vec<Integer> {
+    let mut out = vec![Integer::from(0); v_exp.len()];
+    for i in 0..v_exp.len() {
+        out[i] = base.clone().pow_mod(&v_exp[i], &modulo).unwrap();
+    }
+    out
+}
+
+
+pub fn tensor_product_vecs(vec1: &Vec<Integer>, vec2: &Vec<Integer>, modulo: &Integer) -> Vec<Integer> {
+    let mut res = vec![Integer::from(0); vec1.len() * vec2.len()];
+    for i in 0..vec1.len() {
+        for j in 0..vec2.len() {
+            res[i * vec2.len() + j] = vec1[i].clone() * vec2[j].clone() % modulo;
+        }
+    }
+    res
 }
