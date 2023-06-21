@@ -1,4 +1,3 @@
-// ipe.rs
 extern crate rug;
 use rug::Integer;
 use rug::rand::RandState;
@@ -33,18 +32,26 @@ pub fn qe_keygen(
     let sk_f_nonpower = ipe_keygen(&sk.ipe_sk, &mf, grp);
     let sk_f = decomp.vector_pow_exp(&sk_f_nonpower);
     
-    let dx_power = decomp.matrix_pow_col(&sk.d_x);
-    let dy_power = decomp.matrix_pow_col(&sk.d_y);
-    let dx_dy: Matrix = Matrix::tensor_product(&dx_power, &dy_power, &modulo);
-    let dx_dy_t = dx_dy.transpose();
+    // let dx_power = decomp.matrix_pow_col(&sk.d_x);
+    // let dy_power = decomp.matrix_pow_col(&sk.d_y);
+    // let dx_dy: Matrix = Matrix::tensor_product(&dx_power, &dy_power, &modulo);
+    // let dx_dy_t = dx_dy.transpose();
 
-    // f_dx_dy = dx_dy_t * f
-    let mut f_dx_dy = dx_dy_t.mul_vec(&f);
-    vec_mod(&mut f_dx_dy, &modulo);
+    // // f_dx_dy = dx_dy_t * f
+    // let mut f_dx_dy = dx_dy_t.mul_vec(&f);
+    // vec_mod(&mut f_dx_dy, &modulo);
 
-    let sk_red = vec_exp_with_base(&grp.g, &f_dx_dy, &grp.n_sq);
+    // let sk_red = vec_exp_with_base(&grp.g, &f_dx_dy, &grp.n_sq);
 
-    (sk_f, sk_red)
+    let dx_dy_nondecomp = Matrix::tensor_product(&sk.d_x, &sk.d_y, &modulo);
+    let dx_dy_nondecomp_t = dx_dy_nondecomp.transpose();
+
+    let mut f_dx_dy_nondecomp = dx_dy_nondecomp_t.mul_vec(&f);
+    vec_mod(&mut f_dx_dy_nondecomp, &modulo);
+
+    let sk_red_nondecomp = vec_exp_with_base(&grp.g, &f_dx_dy_nondecomp, &grp.n_sq);
+
+    (sk_f, sk_red_nondecomp)
 }
 
 pub fn qe_enc(
@@ -92,7 +99,13 @@ pub fn qe_enc(
         let mut ctxt_x = d_inv.mul_vec(&right_x);
         ctxt_x = vec_add(&ctxt_x, &d_perp_rand);
         vec_mod(&mut ctxt_x, &modulo);
-
+        
+        // let ctxt_out = decomp.vector(&ctxt_x);
+        // println!("ctxt_x size = {}", ctxt_x.len());
+        // println!("ctxt_x = {:?}", ctxt_x);
+        // println!("ctxt_out size = {}", ctxt_out.len());
+        // println!("ctxt_out = {:?}", ctxt_out);
+        
         (decomp.vector(&ctxt_x), r_x)
     }
 
@@ -132,6 +145,7 @@ pub fn qe_enc(
 
     let ctxt_ipe_nondecomp = ipe_enc(&sk.ipe_sk, &h_join, grp, false, rng);
     let ctxt_ipe = decomp.vector(&ctxt_ipe_nondecomp);
+
     (ctxt_x, ctxt_y, ctxt_ipe)
 }
 
@@ -149,7 +163,6 @@ fn gen_enc_matrix_for_x(
     let mu = grp.mu.clone();
     
     // ctxt_x = d_inv * x + (d_null * r_null + d_inv * v * r_v)
-
     let r_v = gen_random_vector(v.cols, &modulo, rng);
     let r_null = gen_random_vector(d_null.cols, &modulo, rng);
     let mut right = v.mul_vec(&r_v);
@@ -170,9 +183,10 @@ fn gen_enc_matrix_for_x(
     }
     let enc_x_nondecomp = concatenate_vec_col(&mat_left, &mat_const_term);
 
-    // println!("enc_x_non_decomp = {}", enc_x_nondecomp);
-
-    (decomp.matrix_col(&enc_x_nondecomp), r_v)
+    // println!("enc_x_nondecomp = {}", enc_x_nondecomp);
+    let enc_x = decomp.matrix_col(&enc_x_nondecomp);
+    // println!("enc_x = {}", enc_x);
+    (enc_x, r_v)
 }
 
 
@@ -229,8 +243,8 @@ fn compute_m_h_b_1(
     // Extract values from V_rx_ry and set in h_b
     // h_b = (0, ... 0) || v_rx_ry (0: 2*n_x times)
     let mut h_b = vec![Integer::from(0); m_h.rows];
-    for i in 0..(2 * n_x) {
-        let val = v_rx_ry.get(i).unwrap();
+    for i in 0..v_rx_ry.len() {
+        let val = v_rx_ry[i].clone();
         h_b[2 * n_y + i] = val.clone();
     }
 
@@ -270,7 +284,7 @@ pub fn qe_enc_matrix_expression(
         grp,
         decomp,
         rng,
-        false,
+        true,
     );
 
     let (enc_y, r_y) = gen_enc_matrix_for_x(
@@ -298,6 +312,7 @@ pub fn qe_enc_matrix_expression(
     enc_h.mod_inplace(&grp.delta);
 
     // println!("enc_h size = {} x {}", enc_h.rows, enc_h.cols);
+    enc_h = decomp.matrix_col(&enc_h);
 
     (enc_x, enc_y, enc_h)
 }
@@ -328,7 +343,7 @@ pub fn qe_enc_matrix_same_xy(
         grp,
         decomp,
         rng,
-        false,
+        true,
     );
 
 
@@ -352,7 +367,6 @@ pub fn qe_enc_matrix_same_xy(
         val1 = (val1 + val2) % &modulo;
         qe_enc_h_nodecomp.set(i, n_x, val1);
     }
-    println!("enc_h_nondecomp size = {} x {}", qe_enc_h_nodecomp.rows, qe_enc_h_nodecomp.cols);
     let enc_h = decomp.matrix_col(&qe_enc_h_nodecomp);
 
     (enc_x, enc_y, enc_h)
@@ -362,18 +376,16 @@ pub fn qe_dec(
     (sk_f, sk_red): (&Vec<Integer>, &Vec<Integer>),
     (enc_x, enc_y, enc_h): (&Vec<Integer>, &Vec<Integer>, &Vec<Integer>),
     grp: &Group,
+    decomp: &Decomp,
 ) -> Integer {
-    let ctxt_tensor = tensor_product_vecs(&enc_x, &enc_y, &grp.delta);
+    let enc_x_pow = decomp.vector_inv(&enc_x);
+    let enc_y_pow = decomp.vector_inv(&enc_y);
+    let ctxt_tensor = tensor_product_vecs(&enc_x_pow, &enc_y_pow, &grp.delta);
     let val_mult = vec_inner_pow(&sk_red, &ctxt_tensor, &grp);
 
     let out_ipe = ipe_dec(&sk_f, &enc_h, &grp, false);
     let out_ipe_inv = out_ipe.clone().invert(&grp.n_sq).unwrap();
-    // println!("out_ipe = {}", out_ipe);
-    // println!("out_ipe_inv = {}", out_ipe_inv.clone());
-
-
-    
-    let val_mult = (val_mult * out_ipe_inv) % &grp.n_sq;
-    // println!("val_mult = {}", val_mult.clone());
+        
+    let val_mult = (val_mult * out_ipe_inv.clone()) % &grp.n_sq;
     discrete_logarithm(val_mult, &grp)
 }

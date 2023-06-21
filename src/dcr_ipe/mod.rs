@@ -38,7 +38,7 @@ mod test {
     
 
     let start = Instant::now();
-    let (sk, pk) = dcr_setup(dim, bound.clone(), &grp);
+    let (sk, pk) = dcr_setup(dim, &bound, &grp, &mut rand);
     let end = start.elapsed();
     println!("Time elapsed in dcr_setup is: {:?}", end);
     // println!("sk: {:?}", sk);

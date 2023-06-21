@@ -140,7 +140,6 @@ pub fn ipe_enc_matrix_expression(sk: &IpeSk, grp: &Group, mult_mu: bool, rand: &
 
 pub fn ipe_dec(sk_f: &Vec<Integer>, ctxt: &Vec<Integer>, grp: &Group, solve_dl: bool) -> Integer {
     let mut out = vec_inner_pow(&sk_f, &ctxt, &grp);
-    println!("out in ipe_dec = {}", out);
     if solve_dl {
         out = discrete_logarithm(out.clone(), &grp);
     }

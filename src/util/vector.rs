@@ -74,3 +74,18 @@ pub fn tensor_product_vecs(vec1: &Vec<Integer>, vec2: &Vec<Integer>, modulo: &In
     }
     res
 }
+
+pub fn eval_quadratic(
+    x: &Vec<Integer>, 
+    y: &Vec<Integer>, 
+    f: &Vec<Integer>, 
+) -> Integer {
+    assert_eq!(f.len(), x.len() * y.len());
+    let mut out = Integer::from(0);
+    for i in 0..x.len() {
+        for j in 0..y.len() {
+            out += f[i * y.len() + j].clone() * x[i].clone() * y[j].clone();
+        }
+    }
+    out
+}

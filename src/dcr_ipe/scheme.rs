@@ -9,18 +9,17 @@ use crate::util::group::{Group};
 
 // takes input of dimension, secret key bound, and group
 // returns a key pair (sk, pk)
-pub fn dcr_setup(dim: usize, sk_bound: Integer, grp: &Group) -> (Vec<Integer>, Vec<Integer>) {
+pub fn dcr_setup(
+    dim: usize, 
+    sk_bound: &Integer, 
+    grp: &Group,
+    rng: &mut RandState<'_>,
+) -> (Vec<Integer>, Vec<Integer>) {
     let mut sk = vec![Integer::from(0); dim];
     let mut pk = vec![Integer::from(0); dim];
-    
-    let mut rand = RandState::new(); // Create a single RandState object
-    let d = SystemTime::now()
-    .duration_since(SystemTime::UNIX_EPOCH)
-    .expect("Duration since UNIX_EPOCH failed");
-    rand.seed(&Integer::from(d.as_secs()));
-    
+        
     for i in 0..dim {
-        sk[i] = sk_bound.clone().random_below(&mut rand);
+        sk[i] = sk_bound.clone().random_below(rng);
     }
 
     for i in 0..dim {
@@ -32,6 +31,7 @@ pub fn dcr_setup(dim: usize, sk_bound: Integer, grp: &Group) -> (Vec<Integer>, V
 
 pub fn dcr_keygen(sk: &Vec<Integer>, y: &Vec<Integer>) -> Integer {
     // sk_y = inner product between sk and y
+    assert_eq!(sk.len(), y.len(), "sk and y must have the same length");
     let mut sk_y = Integer::from(0);
     for i in 0..sk.len() {
         sk_y += sk[i].clone() * y[i].clone();

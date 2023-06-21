@@ -15,11 +15,9 @@ impl Decomp {
     pub fn new(dim: usize, grp: &Group) -> Decomp {
         let modulo = grp.delta.clone();
         let modulo_exp = grp.n_sq.clone();
-        let (mut base, rem) = modulo.clone().root_rem(Integer::new(), dim as u32);
-        if rem > 0 {
-            base = base.clone() + 1;
-        }
-        // println!("base = {}", base);
+        let modulo_exp_sq = modulo_exp.clone() * modulo_exp.clone();
+        let (mut base, rem) = modulo_exp.clone().root_rem(Integer::new(), dim as u32);
+        base = base.clone() + 1;
         Decomp {
             base,
             dim,
@@ -127,5 +125,29 @@ impl Decomp {
             res.set_col(j, &col_pow);
         }
         res
+    }
+
+    pub fn vector_inv_to_int(&self, a: &Vec<Integer>) -> Integer {
+        assert_eq!(a.len(), self.dim);
+        let mut res = Integer::from(0);
+        for i in 0..self.dim {
+            res += a[i].clone() * self.base.clone().pow_mod(&Integer::from(i), &self.modulo).unwrap();
+        }
+        res
+    }
+    pub fn vector_inv(&self, a: &Vec<Integer>) -> Vec<Integer> {
+        let mut res: Vec<Integer> = vec![Integer::from(0); a.len() / self.dim];
+        for i in 0..res.len() {
+            res[i] = self.vector_inv_to_int(&a[i * self.dim .. (i+1) * self.dim].to_vec());
+        }
+        res
+    }
+}
+
+// define display
+use std::fmt;
+impl fmt::Display for Decomp {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "base = {}, dim = {}, modulo = {}", self.base, self.dim, self.modulo)
     }
 }

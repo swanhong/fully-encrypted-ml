@@ -28,6 +28,8 @@ mod tests {
         println!("{}", mat);
     }
 
+    use crate::util::vector::gen_random_vector;
+    use crate::util::vector::tensor_product_vecs;
     use crate::util::vector::vec_inner_pow;
 
     use super::matrix::Matrix;
@@ -109,10 +111,11 @@ mod tests {
 
     use super::decomp::Decomp;
     use super::group::Group;
+    use super::vector::vec_exp_with_base;
     #[test]
     fn test_decompose_and_power() {
         // Create a decomposition instance
-        let dim = 4; // Example dimension
+        let dim = 2; // Example dimension
         let grp = Group::new(10);
         let decomp = Decomp::new(dim, &grp);
 
@@ -249,6 +252,45 @@ mod tests {
         println!("decomp.modulo = {}", decomp.modulo);
         println!("decomp.base = {}", decomp.base);
         println!("decomp.modulo_exp = {}", decomp.modulo_for_exp);
+        
+        let n_x = 2;
+        let b = 1;
+        let rng = &mut RandState::new(); // Create a single RandState object
+        let dx = Matrix::random(n_x, n_x+b, &grp.delta, rng);
+        let dy = Matrix::random(n_x, n_x+b, &grp.delta, rng);
+        let dxdy = Matrix::tensor_product(&dx, &dy, &grp.delta);
+        let dxdyt = dxdy.transpose();
+        let f = gen_random_vector(dxdyt.cols, &Integer::from(10), rng);
+        let sk_red = vec_exp_with_base(&grp.g, &(dxdyt.mul_vec(&f)), &grp.n_sq);
+        println!("dxdy shape = {} x {}", dxdyt.rows, dxdyt.cols);
+        println!("sk_red (size = {})= {:?}", sk_red.len(), sk_red);
+        println!("dx = \n{}", dx);
+        println!("dy = \n{}", dy);
+        let dx_power = decomp.matrix_pow_col(&dx);
+        let dy_power = decomp.matrix_pow_col(&dy);
+        println!("dx_power = \n{}", dx_power);
+        println!("dy_power = \n{}", dy_power);
+        let dxdy_power = Matrix::tensor_product(&dx_power, &dy_power, &grp.delta);
+        let dxdy_power_t = dxdy_power.transpose();
+        println!("dxdy_power shape = {} x {}", dxdy_power_t.rows, dxdy_power_t.cols);
+        let sk_red_power = vec_exp_with_base(&grp.g, &(dxdy_power_t.mul_vec(&f)), &grp.n_sq);
+        println!("sk_red_power (size = {})= {:?}", sk_red_power.len(), sk_red_power);
+
+        let enc_x = gen_random_vector(n_x+1, &Integer::from(10), rng);
+        let enc_y = gen_random_vector(n_x+1, &Integer::from(10), rng);
+
+        let enc_x_power = decomp.vector(&enc_x);
+        let enc_y_power = decomp.vector(&enc_y);
+
+        let enc_xy = tensor_product_vecs(&enc_x, &enc_y, &grp.delta);
+        let enc_xy_power = tensor_product_vecs(&enc_x_power, &enc_y_power, &grp.delta);
+
+        let val1 = vec_inner_pow(&sk_red, &enc_xy, &grp);
+        let val2 = vec_inner_pow(&sk_red_power, &enc_xy_power, &grp);
+
+        println!("val1 = {}", val1);
+        println!("val2 = {}", val2);
+
     }
 
     #[test]

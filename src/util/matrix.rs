@@ -173,6 +173,14 @@ impl Matrix {
         }
     }
 
+    pub fn add_int_inplace(&mut self, other: &Integer) {
+        for i in 0..self.rows {
+            for j in 0..self.cols {
+                self.data[i * self.cols + j] += other.clone();
+            }
+        }
+    }
+
     // mult
     pub fn mul_inplace(&mut self, other: &Matrix) {
         assert!(self.cols == other.rows);
@@ -309,6 +317,8 @@ impl fmt::Display for Matrix {
 }
 
 use std::ops::{Add, Sub, Mul, Neg, Rem, RemAssign};
+
+use super::vector::eval_quadratic;
 
 
 impl<'a, 'b> Add<&'b Matrix> for &'a Matrix {
@@ -527,6 +537,33 @@ pub fn concatenate_vec_col(a: &Matrix, b: &Vec<Integer>) -> Matrix {
     result
 }
 
+pub fn concatenate_diag_one(a: &Matrix) -> Matrix {
+    let mut result = Matrix::new(a.rows + 1, a.cols + 1);
+    for i in 0..a.rows {
+        for j in 0..a.cols {
+            result.set(i, j, a.get(i, j));
+        }
+    }
+    for i in 0..a.rows {
+        result.set(i, a.cols, Integer::from(0));
+    }
+    for j in 0..a.cols {
+        result.set(a.rows, j, Integer::from(0));
+    }
+    result.set(a.rows, a.cols, Integer::from(1));
+    result
+}
+
+pub fn remove_diag_one(a: &Matrix) -> Matrix {
+    let mut result = Matrix::new(a.rows - 1, a.cols - 1);
+    for i in 0..a.rows - 1 {
+        for j in 0..a.cols - 1 {
+            result.set(i, j, a.get(i, j));
+        }
+    }
+    result
+}
+
 pub fn transpose(a: &Matrix) -> Matrix {
     let mut result = Matrix::new(a.cols, a.rows);
     for i in 0..a.rows {
@@ -619,4 +656,17 @@ pub fn generate_right_inverse_space(
     null %= modulus;
 
     (a, a_inv, null)
+}
+
+pub fn eval_quadratic_multivariate(
+    x: &Vec<Integer>,
+    y: &Vec<Integer>,
+    f_mat: &Matrix,
+) -> Vec<Integer> {
+    let mut result = vec![Integer::from(0); f_mat.rows];
+    for i in 0..f_mat.rows {
+        let f = f_mat.get_row(i);
+        result[i] = eval_quadratic(&x, &y, &f);
+    }
+    result
 }

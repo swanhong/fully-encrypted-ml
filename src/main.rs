@@ -4,10 +4,7 @@ mod util;
 mod dcr_ipe;
 mod ipe;
 mod qe;
-
-// use rug::Integer;
-// use crate::dcr_ipe::scheme::{dcr_setup, dcr_keygen, dcr_enc, dcr_dec};
-// use std::time::{Duration, Instant};
+mod protocol;
 mod test;
 
 #[test]
