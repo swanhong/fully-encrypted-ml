@@ -1,6 +1,7 @@
 use rug::{Integer, rand::RandState};
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::str::FromStr;
+use crate::util::vector::{gen_random_vector, tensor_product_vecs};
 
 #[derive(Clone, Debug)]
 pub struct Matrix {
@@ -55,6 +56,35 @@ impl Matrix {
             for j in 0..cols {
                 matrix.set(i, j, bound.clone().random_below(rng));
             }
+        }
+        matrix
+    }
+
+    pub fn gen_tensored_matrix(&self, modulo: &Integer) -> Matrix {
+        // input dim = self.rows
+        // output dim = self.cols
+        let mut matrix = Matrix::new(self.rows, self.cols * self.cols);
+        for i in 0..self.rows {
+            let f = self.get_row(i);
+            let f_tensor = tensor_product_vecs(&f, &f, &modulo);
+            matrix.set_row(i, &f_tensor);
+        }
+        matrix
+    }
+
+    pub fn random_quadratic_tensored(
+        dim_input: usize,
+        dim_output: usize,
+        bound: &Integer,
+        modulo: &Integer,
+        rng: &mut RandState<'_>,
+    ) -> Matrix {
+        let mut matrix = Matrix::new(dim_output, dim_input * dim_input);
+
+        for i in 0..dim_output {
+            let f = gen_random_vector(dim_input, bound, rng);
+            let f_tensor = tensor_product_vecs(&f, &f, &modulo);
+            matrix.set_row(i, &f_tensor);
         }
         matrix
     }
@@ -318,7 +348,7 @@ impl fmt::Display for Matrix {
 
 use std::ops::{Add, Sub, Mul, Neg, Rem, RemAssign};
 
-use super::vector::eval_quadratic;
+use super::vector::{eval_quadratic};
 
 
 impl<'a, 'b> Add<&'b Matrix> for &'a Matrix {
@@ -476,8 +506,6 @@ impl RemAssign<&Integer> for Matrix {
         self.mod_inplace(modulo);
     }
 }
-
-
 
 pub fn concatenate_row(a: &Matrix, b: &Matrix) -> Matrix {
     assert_eq!(a.cols, b.cols);

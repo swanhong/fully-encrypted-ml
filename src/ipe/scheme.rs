@@ -3,8 +3,6 @@ extern crate rug;
 use rug::Integer;
 use rug::rand::RandState;
 
-use std::time::SystemTime;
-
 use crate::util::group::Group;
 use crate::util::group::discrete_logarithm;
 use crate::util::matrix::*;
@@ -22,7 +20,6 @@ pub fn ipe_keygen(sk: &IpeSk, y: &Vec<Integer>, grp: &Group) -> Vec<Integer> {
     
     let mut u_t_y_left = Vec::with_capacity(sk.u_t.rows);
     let mut u_t_y = Vec::with_capacity(u_t_y_left.len() + y.len());
-    // let mut sk_f_mat = Matrix::new(1, sk.d.cols);
     // U_t_y = (-1 * sk->U_t * y) || y
     for i in 0..sk.u_t.rows {
         val = Integer::from(0);
@@ -47,14 +44,6 @@ pub fn ipe_keygen(sk: &IpeSk, y: &Vec<Integer>, grp: &Group) -> Vec<Integer> {
 
     let sk_f_col = sk_f_mat.get_row(0);
 
-    // let mut sk_f: Vec<Integer> = Vec::new();
-    // for i in 0..sk_f_col.len() {
-    //     let power = match grp.g.clone().pow_mod(&sk_f_col[i], &grp.delta) {
-    //         Ok(x) => x,
-    //         Err(e) => panic!("Error in ipe_keygen: {}", e),
-    //     };
-    //     sk_f.push(power);
-    // }
     let sk_f: Vec<Integer> = sk_f_col
     .iter()
     .map(|val| {

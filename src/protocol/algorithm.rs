@@ -1,7 +1,6 @@
 use rug::Integer;
 use rug::rand::RandState;
 use crate::util::matrix::{Matrix, concatenate_diag_one, concatenate_col};
-use std::result;
 
 pub fn echelon_form(
     m: &mut Matrix,
@@ -41,7 +40,7 @@ pub fn echelon_form(
         let pivot = m.get(pivot_row, pivot_col);
         let pivot_inv = match pivot.clone().invert(&mod_val) {
             Ok(x) => x,
-            Err(e) => Integer::from(-1)
+            Err(_e) => Integer::from(-1)
         };
 
         if pivot_inv != Integer::from(-1) {
@@ -58,7 +57,7 @@ pub fn echelon_form(
             let mut ratio = Integer::from(0);
             let pivot_inv = match pivot.clone().invert(&mod_val) {
                 Ok(x) => x,
-                Err(e) => Integer::from(-1)
+                Err(_e) => Integer::from(-1)
             };
             if pivot_inv != Integer::from(-1) {
                 let val1 = m.get(i, pivot_col);

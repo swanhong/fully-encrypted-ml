@@ -1,8 +1,7 @@
 use rug::Integer;
 use rug::rand::RandState;
 use crate::util::group::Group;
-
-use std::time::SystemTime;
+use rayon::prelude::*;
 
 pub fn gen_random_vector(dim: usize, bound: &Integer, rand: &mut RandState<'_>) -> Vec<Integer> {
     // let mut rand = RandState::new(); // Create a single RandState object
@@ -43,25 +42,37 @@ pub fn vec_mod(vec: &mut Vec<Integer>, modulus: &Integer) {
 
 pub fn vec_inner_pow(v_base: &Vec<Integer>, v_exp: &Vec<Integer>, grp: &Group) -> Integer {
     assert_eq!(v_base.len(), v_exp.len());
-    let modulo = grp.n_sq.clone();
-    let mut out = Integer::from(0);
-    for i in 0..v_base.len() {
-        let val: Integer = v_base[i].clone().pow_mod(&v_exp[i], &modulo).unwrap();
-        if i == 0 {
-            out = val.clone();
-        } else {
-            out = out * val % &modulo;
-        }
+    
+    let modulo = &grp.n_sq;
+    let mut out = Integer::from(1);
+
+    for (base, exp) in v_base.iter().zip(v_exp.iter()) {
+        let val: Integer = base.clone().pow_mod(exp, modulo).unwrap();
+        out = out * val % modulo;
     }
+
     out
+
+    // for i in 0..v_base.len() {
+    //     let val: Integer = v_base[i].clone().pow_mod(&v_exp[i], &modulo).unwrap();
+    //     if i == 0 {
+    //         out = val.clone();
+    //     } else {
+    //         out = out * val % &modulo;
+    //     }
+    // }
+    // out
 }
 
 pub fn vec_exp_with_base(base: &Integer, v_exp: &Vec<Integer>, modulo: &Integer) -> Vec<Integer> {
-    let mut out = vec![Integer::from(0); v_exp.len()];
-    for i in 0..v_exp.len() {
-        out[i] = base.clone().pow_mod(&v_exp[i], &modulo).unwrap();
-    }
-    out
+    // let mut out = vec![Integer::from(0); v_exp.len()];
+    // for i in 0..v_exp.len() {
+    //     out[i] = base.clone().pow_mod(&v_exp[i], &modulo).unwrap();
+    // }
+    // out
+    v_exp.par_iter()
+        .map(|exp| base.clone().pow_mod(exp, modulo).unwrap())
+        .collect()
 }
 
 

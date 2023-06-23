@@ -9,23 +9,31 @@ use crate::util::decomp::Decomp;
 use crate::dcr_ipe::scheme::{dcr_setup, dcr_enc, dcr_keygen, dcr_dec};
 use crate::qe::keys::QeSk;
 use crate::qe::scheme::{qe_setup, qe_keygen, qe_enc_matrix_same_xy, qe_dec};
+use std::time::SystemTime;
 
 pub fn protocol_setup(
-    dim: usize,
+    dim_vec: Vec<usize>,
     f_num: usize,
     k: usize,
     sk_bound: &Integer,
     grp: &Group,
     rng: &mut RandState<'_>,
-) -> ((Vec<Integer>, Vec<Integer>), QeSk, Vec<QeSk>) {
+) -> ((Vec<Integer>, Vec<Integer>), QeSk, Vec<QeSk>, QeSk) {
+    let dim = dim_vec[0];
+    println!("qe_sk_init dim = {}", dim);
     let (dcr_sk, dcr_pk) = dcr_setup(dim + dim + 1, sk_bound, grp, rng);
-    let qe_sk = qe_setup(grp, dim + k, dim + k, 2 * dim + 1, rng);
+    let qe_sk_init = qe_setup(grp, dim + k, dim + k, 2 * dim + 1, rng);
     let mut qe_sk_fcn = Vec::with_capacity(f_num);
-    for i in 0..f_num {
+    for i in 1..dim_vec.len()-1 {
+        let dim = dim_vec[i];
+        println!("qe_sk_fcn dim = {}", dim);
         qe_sk_fcn.push(qe_setup(grp, dim + k, dim + k, 2 * dim + 1, rng));
     }
+    let dim = dim_vec[dim_vec.len()-1];
+    println!("qe_sk_end dim = {}", dim);
+    let qe_sk_end = qe_setup(grp, dim + k, dim + k, 2 * dim + 1, rng);
 
-    ((dcr_sk, dcr_pk), qe_sk, qe_sk_fcn)
+    ((dcr_sk, dcr_pk), qe_sk_init, qe_sk_fcn, qe_sk_end)
 }
 
 pub fn protocol_enc_init(
@@ -148,7 +156,8 @@ pub fn protocol_keyswitch(
 }
 
 pub fn protocol_keygen_i(
-    qe_sk: &QeSk,
+    qe_sk_enc: &QeSk,
+    qe_sk_keygen: &QeSk,
     h_right: &Matrix,
     hm_left: &Matrix,
     dim: usize,
@@ -158,7 +167,7 @@ pub fn protocol_keygen_i(
     grp: &Group,
     rng: &mut RandState<'_>,
 ) -> ((Vec<Integer>, Vec<Integer>, Vec<Integer>), (Matrix, Matrix, Matrix), (Matrix, Matrix, Matrix)) {
-    let (qe_enc_mat_x, qe_enc_mat_y, qe_enc_mat_h) = qe_enc_matrix_same_xy(&qe_sk, dim + k, &grp, &decomp, rng);
+    let (qe_enc_mat_x, qe_enc_mat_y, qe_enc_mat_h) = qe_enc_matrix_same_xy(&qe_sk_enc, dim + k, &grp, &decomp, rng);
     
     // divide enc_mats into M * b
     pub fn divide_mat_into_m_b(
@@ -177,7 +186,6 @@ pub fn protocol_keygen_i(
         }
         (mat_left, vec_right)
     }
-
     let (qe_enc_mat_x, qe_b_x_nondecomp) = divide_mat_into_m_b(&qe_enc_mat_x);
     let (qe_enc_mat_y, qe_b_y_nondecomp) = divide_mat_into_m_b(&qe_enc_mat_y);
     let (qe_enc_mat_h, qe_b_h_nondecomp) = divide_mat_into_m_b(&qe_enc_mat_h);
@@ -199,10 +207,6 @@ pub fn protocol_keygen_i(
     ) -> Matrix {
         // A = Enc, B = H, C = F, D = (H' tensor H')
         // output decomp(A * B) * (C * D)
-        // println!("a_shape = {} {}", a.rows, a.cols);
-        // println!("b_shape = {} {}", b.rows, b.cols);
-        // println!("c_shape = {} {}", c.rows, c.cols);
-        // println!("d_shape = {} {}", d.rows, d.cols);
         let modulo = grp.delta.clone();
         let mut ab = a * b;
         ab.mod_inplace(&modulo);
@@ -242,10 +246,9 @@ pub fn protocol_keygen_i(
         (sk_f_mat, sk_red_mat)
     }
 
-    let (sk_f_mat_x, sk_red_mat_x) = gen_f_and_red(&qe_sk, total_mat_x, &grp, &decomp);
-    let (sk_f_mat_y, sk_red_mat_y) = gen_f_and_red(&qe_sk, total_mat_y, &grp, &decomp);
-    let (sk_f_mat_h, sk_red_mat_h) = gen_f_and_red(&qe_sk, total_mat_h, &grp, &decomp);
-
+    let (sk_f_mat_x, sk_red_mat_x) = gen_f_and_red(&qe_sk_keygen, total_mat_x, &grp, &decomp);
+    let (sk_f_mat_y, sk_red_mat_y) = gen_f_and_red(&qe_sk_keygen, total_mat_y, &grp, &decomp);
+    let (sk_f_mat_h, sk_red_mat_h) = gen_f_and_red(&qe_sk_keygen, total_mat_h, &grp, &decomp);
     ((qe_b_x, qe_b_y, qe_b_h), (sk_f_mat_x, sk_f_mat_y, sk_f_mat_h), (sk_red_mat_x, sk_red_mat_y, sk_red_mat_h))
 }
 
@@ -275,10 +278,6 @@ pub fn protocol_dec_i(
         for i in 0..sk_f_mat.rows {
             let sk_f = sk_f_mat.get_row(i);
             let sk_red = sk_red_mat.get_row(i);
-            // println!("in compute_f_red_out..");
-            // println!("sk_f len = {}", sk_f.len());
-            // println!("sk_red len = {}", sk_red.len());
-            // println!("ctxt_x len = {}", ctxt_triple.0.len());
             ct_out[i] =qe_dec((&sk_f, &sk_red), ctxt_triple, grp, decomp);
         }
         vec_add(&ct_out, &qe_b)
@@ -319,9 +318,7 @@ pub fn protocol_keygen_end(
 
     let hm_origin = remove_diag_one(&hm_left);
     let hmhm = Matrix::tensor_product(&hm_origin, &hm_origin, &grp.delta);
-    // println!("hm origin shape = {} {}", hm_origin.rows, hm_origin.cols);
-    // println!("hmhm shape = {} {}", hmhm.rows, hmhm.cols);
-    // println!("f shape = {} {}", f.rows, f.cols);
+    
     let mut fhmhm = f * &hmhm;
     fhmhm.mod_inplace(&modulo);
 

@@ -84,11 +84,12 @@ impl Decomp {
     }
 
     pub fn vector_pow(&self, a: &Vec<Integer>) -> Vec<Integer> {
-        let mut res: Vec<Integer> = Vec::new();
-        for i in 0..a.len() {
-            res.extend(self.int_pow(&a[i]));
-        }
-        res
+        // let mut res: Vec<Integer> = Vec::new();
+        // for i in 0..a.len() {
+        //     res.extend(self.int_pow(&a[i]));
+        // }
+        // res
+        a.iter().flat_map(|x| self.int_pow(x)).collect()
     }
 
     pub fn int_pow_exp(&self, a: &Integer) -> Vec<Integer> {
@@ -101,11 +102,12 @@ impl Decomp {
         res
     }
     pub fn vector_pow_exp(&self, a: &Vec<Integer>) -> Vec<Integer> {
-        let mut res: Vec<Integer> = Vec::new();
-        for i in 0..a.len() {
-            res.extend(self.int_pow_exp(&a[i]));
-        }
-        res
+        // let mut res: Vec<Integer> = Vec::new();
+        // for i in 0..a.len() {
+        //     res.extend(self.int_pow_exp(&a[i]));
+        // }
+        // res
+        a.iter().flat_map(|x| self.int_pow_exp(x)).collect()
     }
     
 

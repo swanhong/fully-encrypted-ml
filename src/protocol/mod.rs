@@ -1,5 +1,5 @@
-mod scheme;
-mod algorithm;
+pub mod scheme;
+pub mod algorithm;
 
 #[cfg(test)]
 mod test {
@@ -49,9 +49,10 @@ mod test {
         let start = SystemTime::now();
         let ((dcr_sk, dcr_pk), 
             qe_sk, 
-            qe_sk_fcn
+            qe_sk_vec,
+            qe_sk_end,
         ) = protocol_setup(
-            dim, 
+            vec![dim], 
             f_num, 
             k, 
             &sk_bound, 
@@ -100,7 +101,7 @@ mod test {
         println!("start protocol_keygen_i");
         let start = SystemTime::now();
         let ((qe_b_x, qe_b_y, qe_b_h), (sk_f_mat_x, sk_f_mat_y, sk_f_mat_h), (sk_red_mat_x, sk_red_mat_y, sk_red_mat_h))
-            = protocol_keygen_i(&qe_sk, &h_right, &h_left, dim, k, &f_mat, &decomp, &grp, &mut rng);
+            = protocol_keygen_i(&qe_sk, &qe_sk, &h_right, &h_left, dim, k, &f_mat, &decomp, &grp, &mut rng);
         let end = start.elapsed();
         println!("Time elapsed in protocol_keygen_i is: {:?}", end);
 

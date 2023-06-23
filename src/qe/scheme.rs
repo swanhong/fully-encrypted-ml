@@ -2,19 +2,18 @@ extern crate rug;
 use rug::Integer;
 use rug::rand::RandState;
 
-use std::time::SystemTime;
 
 use crate::util::group::Group;
 use crate::util::group::discrete_logarithm;
 use crate::util::matrix::*;
 use crate::util::vector::*;
 use crate::util::decomp::Decomp;
-use crate::ipe::keys::IpeSk;
 use crate::ipe::scheme::{ipe_keygen, ipe_enc, ipe_enc_matrix_expression, ipe_dec};
 use super::keys::QeSk;
+// timechecking
 
-pub fn qe_setup(grp: &Group, n_x: usize, n_y: usize, B: usize, rng: &mut RandState<'_>) -> QeSk {
-    QeSk::new(grp, n_x, n_y, B, rng)
+pub fn qe_setup(grp: &Group, n_x: usize, n_y: usize, b: usize, rng: &mut RandState<'_>) -> QeSk {
+    QeSk::new(grp, n_x, n_y, b, rng)
 }
 
 pub fn qe_keygen(
@@ -25,31 +24,40 @@ pub fn qe_keygen(
 ) -> (Vec<Integer>, Vec<Integer>) {
     let modulo = grp.delta.clone();
 
+    // sk_f = sk->M_f * f
+    // let start = SystemTime::now();
     let mut mf = sk.m.mul_vec(&f);
     vec_mod(&mut mf, &modulo);
+    // let end = start.elapsed();
+    // println!("Time elapsed in m * f: {:?}", end);
 
     // for inverse decomposition, add power of base to sk_f
+    // let start = SystemTime::now();
     let sk_f_nonpower = ipe_keygen(&sk.ipe_sk, &mf, grp);
+    // let end = start.elapsed();
+    // println!("Time elapsed in ipe_keygen: {:?}", end);
+
+    // let start = SystemTime::now();
     let sk_f = decomp.vector_pow_exp(&sk_f_nonpower);
+    // let end = start.elapsed();
+    // println!("Time elapsed in vec_pow_exp: {:?}", end);
     
-    // let dx_power = decomp.matrix_pow_col(&sk.d_x);
-    // let dy_power = decomp.matrix_pow_col(&sk.d_y);
-    // let dx_dy: Matrix = Matrix::tensor_product(&dx_power, &dy_power, &modulo);
-    // let dx_dy_t = dx_dy.transpose();
-
-    // // f_dx_dy = dx_dy_t * f
-    // let mut f_dx_dy = dx_dy_t.mul_vec(&f);
-    // vec_mod(&mut f_dx_dy, &modulo);
-
-    // let sk_red = vec_exp_with_base(&grp.g, &f_dx_dy, &grp.n_sq);
-
+    // let start = SystemTime::now();
     let dx_dy_nondecomp = Matrix::tensor_product(&sk.d_x, &sk.d_y, &modulo);
     let dx_dy_nondecomp_t = dx_dy_nondecomp.transpose();
+    // let end = start.elapsed();
+    // println!("Time elapsed in tensor_product: {:?}", end);
 
+    // let start = SystemTime::now();
     let mut f_dx_dy_nondecomp = dx_dy_nondecomp_t.mul_vec(&f);
     vec_mod(&mut f_dx_dy_nondecomp, &modulo);
+    // let end = start.elapsed();
+    // println!("Time elapsed in f * dx_dy_nondecomp_t: {:?}", end);
 
+    // let start = SystemTime::now();
     let sk_red_nondecomp = vec_exp_with_base(&grp.g, &f_dx_dy_nondecomp, &grp.n_sq);
+    // let end = start.elapsed();
+    // println!("Time elapsed in vec_exp_with_base: {:?}", end);
 
     (sk_f, sk_red_nondecomp)
 }
@@ -245,7 +253,7 @@ fn compute_m_h_b_1(
     let mut h_b = vec![Integer::from(0); m_h.rows];
     for i in 0..v_rx_ry.len() {
         let val = v_rx_ry[i].clone();
-        h_b[2 * n_y + i] = val.clone();
+        h_b[2 * n_x + i] = val.clone();
     }
 
     // Concatenate M_h and h_b to create M_h_b
@@ -265,7 +273,6 @@ fn compute_m_h_b_1(
         }
     }
     // println!("m_h_b_1 = {}", m_h_b_1);
-
     m_h_b_1
 }
 
@@ -350,7 +357,7 @@ pub fn qe_enc_matrix_same_xy(
 
     let ipe_enc_mat = ipe_enc_matrix_expression(&qe_sk.ipe_sk, grp, false, rng);
     let m_h_b_1 = compute_m_h_b_1(qe_sk, n_x, n_x, &r_x, &r_y, grp);
-
+    
     let mut qe_enc_h_origin = ipe_enc_mat * m_h_b_1;
     qe_enc_h_origin.mod_inplace(&modulo);
 
@@ -368,7 +375,6 @@ pub fn qe_enc_matrix_same_xy(
         qe_enc_h_nodecomp.set(i, n_x, val1);
     }
     let enc_h = decomp.matrix_col(&qe_enc_h_nodecomp);
-
     (enc_x, enc_y, enc_h)
 }
 

@@ -1,7 +1,4 @@
 extern crate rug;
-use std::collections::hash_map::RandomState;
-
-use rug::Integer;
 use rug::rand::RandState;
 
 use crate::util::{group::Group, matrix::*};
