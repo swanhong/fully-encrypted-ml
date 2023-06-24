@@ -308,8 +308,8 @@ fn run_protocol_with_ml_data() {
     );
     let end = start.elapsed();
     println!("Time elapsed in protocol_keyswitch is: {:?}", end);
-keygen_i
-    println!("start protocol_");
+
+    println!("start protocol_keygen_i");
     let start = SystemTime::now();
     let ((qe_b_x, qe_b_y, qe_b_h), 
          (sk_f_mat_x, sk_f_mat_y, sk_f_mat_h), 
