@@ -15,7 +15,7 @@ use std::time::SystemTime;
 use crate::protocol::scheme::{protocol_setup, protocol_keygen_switch, protocol_enc_init, protocol_keyswitch, protocol_keygen_i, protocol_dec_i, protocol_keygen_end, protocol_dec_end};
 use crate::util::group::Group;
 use crate::util::matrix::{Matrix, eval_quadratic_multivariate, concatenate_col, concatenate_vec_row};
-use crate::util::vector::{gen_random_vector, vec_mod};
+use crate::util::vector::{gen_random_vector, vec_mod, vec_mul_scalar};
 use crate::util::decomp::Decomp;
 use crate::protocol::algorithm::{sample_h, sample_gamma};
 use crate::parse::file_reader::read_matrix;
@@ -192,8 +192,8 @@ fn run_protocol_with_ml_data() {
     let grp = Group::new(100); // Initialize the group        
     // println!("{}", grp);
 
-    let scale = 100;    
-    
+    let scale = 1048576; // 2^20
+    // let scale = 100; // 2^20
     let sk_bound = Integer::from(10);
     let decomp = Decomp::new(4, &grp);
 
@@ -207,9 +207,13 @@ fn run_protocol_with_ml_data() {
     let x_test = read_matrix(&file_x_test, scale);
     let layer1_weight = read_matrix(&file_layer1_weight, scale);
     let layer2_weight = read_matrix(&file_layer2_weight, scale);
-    let layer1_bias = read_matrix(&file_layer1_bias, scale.pow(2));
-    let layer2_bias = read_matrix(&file_layer2_bias, scale.pow(5));
+    let mut layer1_bias = read_matrix(&file_layer1_bias, scale);
+    let mut layer2_bias = read_matrix(&file_layer2_bias, scale);
 
+    let scale_int = Integer::from(scale);
+    layer1_bias.mul_scalar_inplace(&scale_int);
+    let scale_int_4 = scale_int.pow(4);
+    layer2_bias.mul_scalar_inplace(&scale_int_4);
 
     let mut x = x_test.get_row(0);
     x.push(Integer::from(1));
@@ -304,8 +308,8 @@ fn run_protocol_with_ml_data() {
     );
     let end = start.elapsed();
     println!("Time elapsed in protocol_keyswitch is: {:?}", end);
-
-    println!("start protocol_keygen_i");
+keygen_i
+    println!("start protocol_");
     let start = SystemTime::now();
     let ((qe_b_x, qe_b_y, qe_b_h), 
          (sk_f_mat_x, sk_f_mat_y, sk_f_mat_h), 
