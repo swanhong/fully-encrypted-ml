@@ -19,16 +19,16 @@ mod tests {
         // rand.seed(&Integer::from(d.as_secs()));
         
         let grp = Group::new(10); // Initialize the group        
-        println!("{}", grp);
+        // println!("{}", grp);
         
-        let n_x = 4;
-        let n_y = 4;
+        let n_x = 6;
+        let n_y = 6;
         let b = 2 * n_x + 1;
         // let b = 1;
-        let bound = 10;
+        let bound = 3;
 
-        let decomp = Decomp::new(2, &grp);
-        println!("decomp = {}", decomp);
+        let decomp = Decomp::new(4, &grp);
+        // println!("decomp = {}", decomp);
 
         let mut x = gen_random_vector(n_x, &Integer::from(bound), &mut rand);
         let mut y = gen_random_vector(n_y, &Integer::from(bound), &mut rand);
@@ -109,9 +109,9 @@ mod tests {
             ctxt_h = enc_mat_h.mul_vec(&y_xmu_1_1);
             vec_mod(&mut ctxt_h, &grp.delta);
         }
-        println!("ctxt_x (size = {}): {:?}", ctxt_x.len(), ctxt_x);
-        println!("ctxt_y (size = {}): {:?}", ctxt_y.len(), ctxt_y);
-        println!("ctxt_h (size = {}): {:?}", ctxt_h.len(), ctxt_h);
+        // println!("ctxt_x (size = {}): {:?}", ctxt_x.len(), ctxt_x);
+        // println!("ctxt_y (size = {}): {:?}", ctxt_y.len(), ctxt_y);
+        // println!("ctxt_h (size = {}): {:?}", ctxt_h.len(), ctxt_h);
         
 
 
@@ -157,6 +157,17 @@ mod tests {
 
         let mut x = gen_random_vector(n_x, &Integer::from(bound), &mut rand);
         let mut f = gen_random_vector(n_x * n_x, &Integer::from(bound), &mut rand);
+
+
+        // compute out2 = inner product <f, x tensor y>
+        let mut out2 = Integer::from(0);
+        for i in 0..n_x {
+            for j in 0..n_x {
+                out2 += f[i * n_x + j].clone() * x[i].clone() * x[j].clone();
+            }
+        }
+
+        assert!(out2 < grp.n, "out2 = {} >= n = {}", out2, grp.n);
 
         // Perform setup
         let start = SystemTime::now();
@@ -222,14 +233,6 @@ mod tests {
         let end = start.elapsed();
         println!("Time elapsed in qe_dec is: {:?}", end);
 
-
-        // compute out2 = inner product <f, x tensor y>
-        let mut out2 = Integer::from(0);
-        for i in 0..n_x {
-            for j in 0..n_x {
-                out2 += f[i * n_x + j].clone() * x[i].clone() * x[j].clone();
-            }
-        }
         println!("x = {:?}", x);
         println!("f = {:?}", f);
         println!("out: {}", out);

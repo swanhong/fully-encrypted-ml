@@ -74,6 +74,9 @@ pub fn dcr_dec(ct_x: &Vec<Integer>, y: &Vec<Integer>, sk_y: &Integer, grp: &Grou
             .invert(&grp.n_sq).unwrap();
     out *= num;
     out = out.div_rem_euc(grp.n_sq.clone()).1;
-    out = (out - 1) / &grp.n;
-    out
+    // out = (out - 1) / &grp.n;
+    out = out - 1;
+    let (quo, rem) = out.div_rem(grp.n.clone());
+    assert!(rem == Integer::from(0), "Remainder is not 0");
+    quo
 }

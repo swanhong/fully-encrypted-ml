@@ -8,6 +8,7 @@ use crate::util::group::discrete_logarithm;
 use crate::util::matrix::*;
 use crate::util::vector::*;
 use super::keys::IpeSk;
+use std::time::{Duration, SystemTime};
 
 pub fn ipe_setup(group: &Group, dim: usize, b: usize, rng: &mut RandState<'_>) -> IpeSk {
     IpeSk::new(dim, b, group, rng)
@@ -44,6 +45,7 @@ pub fn ipe_keygen(sk: &IpeSk, y: &Vec<Integer>, grp: &Group) -> Vec<Integer> {
 
     let sk_f_col = sk_f_mat.get_row(0);
 
+    let start = SystemTime::now();
     let sk_f: Vec<Integer> = sk_f_col
     .iter()
     .map(|val| {
@@ -53,6 +55,9 @@ pub fn ipe_keygen(sk: &IpeSk, y: &Vec<Integer>, grp: &Group) -> Vec<Integer> {
             .unwrap_or_else(|e| panic!("Error in ipe_keygen: {}", e))
     })
     .collect();
+    let end = start.elapsed();
+    let num_pow_mod = sk_f.len();
+    // println!("Time elapsed in ipe_keygen::pow_mod is: {:?} for {} pow_mod", end, num_pow_mod);
     
     sk_f
 }
@@ -128,7 +133,10 @@ pub fn ipe_enc_matrix_expression(sk: &IpeSk, grp: &Group, mult_mu: bool, rand: &
 }
 
 pub fn ipe_dec(sk_f: &Vec<Integer>, ctxt: &Vec<Integer>, grp: &Group, solve_dl: bool) -> Integer {
+    let start = SystemTime::now();
     let mut out = vec_inner_pow(&sk_f, &ctxt, &grp);
+    let end = start.elapsed();
+    // println!("Time elapsed in ipe_dec::vec_inner_pow is: {:?} for {} pow_mod", end, sk_f.len());
     if solve_dl {
         out = discrete_logarithm(out.clone(), &grp);
     }

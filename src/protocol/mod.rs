@@ -10,13 +10,13 @@ mod test {
     use crate::util::group::Group;
 
     use crate::util::matrix::{Matrix, eval_quadratic_multivariate};
-    use crate::util::vector::{gen_random_vector, vec_mod, vec_mul_scalar, tensor_product_vecs};
+    use crate::util::vector::{gen_random_vector, vec_mod, tensor_product_vecs};
     use crate::util::decomp::Decomp;
     use super::algorithm::{sample_h, sample_gamma};
 
     #[test]
     fn test_protocol_start_to_end() {
-        println!("run test_ipe_start_to_end");
+        println!("run test_protocol_start_to_end");
 
         let mut rng = RandState::new(); // Create a single RandState object
         let d = SystemTime::now()
@@ -24,14 +24,14 @@ mod test {
         .expect("Duration since UNIX_EPOCH failed");
         rng.seed(&Integer::from(d.as_secs()));
         
-        let grp = Group::new(3072); // Initialize the group        
+        let grp = Group::new(100); // Initialize the group        
         // println!("{}", grp);
         
         let dim = 2;
         let k = 1;
         let f_num = dim;
         // let b = 1;
-        let bound = 3;
+        let bound = 10;
         let sk_bound = Integer::from(10);
 
         let decomp = Decomp::new(4, &grp);

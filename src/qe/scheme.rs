@@ -11,6 +11,7 @@ use crate::util::decomp::Decomp;
 use crate::ipe::scheme::{ipe_keygen, ipe_enc, ipe_enc_matrix_expression, ipe_dec};
 use super::keys::QeSk;
 // timechecking
+use std::time::{Duration, SystemTime};
 
 pub fn qe_setup(grp: &Group, n_x: usize, n_y: usize, b: usize, rng: &mut RandState<'_>) -> QeSk {
     QeSk::new(grp, n_x, n_y, b, rng)
@@ -25,39 +26,21 @@ pub fn qe_keygen(
     let modulo = grp.delta.clone();
 
     // sk_f = sk->M_f * f
-    // let start = SystemTime::now();
     let mut mf = sk.m.mul_vec(&f);
     vec_mod(&mut mf, &modulo);
-    // let end = start.elapsed();
-    // println!("Time elapsed in m * f: {:?}", end);
 
     // for inverse decomposition, add power of base to sk_f
-    // let start = SystemTime::now();
     let sk_f_nonpower = ipe_keygen(&sk.ipe_sk, &mf, grp);
-    // let end = start.elapsed();
-    // println!("Time elapsed in ipe_keygen: {:?}", end);
 
-    // let start = SystemTime::now();
     let sk_f = decomp.vector_pow_exp(&sk_f_nonpower);
-    // let end = start.elapsed();
-    // println!("Time elapsed in vec_pow_exp: {:?}", end);
     
-    // let start = SystemTime::now();
     let dx_dy_nondecomp = Matrix::tensor_product(&sk.d_x, &sk.d_y, &modulo);
     let dx_dy_nondecomp_t = dx_dy_nondecomp.transpose();
-    // let end = start.elapsed();
-    // println!("Time elapsed in tensor_product: {:?}", end);
 
-    // let start = SystemTime::now();
     let mut f_dx_dy_nondecomp = dx_dy_nondecomp_t.mul_vec(&f);
     vec_mod(&mut f_dx_dy_nondecomp, &modulo);
-    // let end = start.elapsed();
-    // println!("Time elapsed in f * dx_dy_nondecomp_t: {:?}", end);
 
-    // let start = SystemTime::now();
     let sk_red_nondecomp = vec_exp_with_base(&grp.g, &f_dx_dy_nondecomp, &grp.n_sq);
-    // let end = start.elapsed();
-    // println!("Time elapsed in vec_exp_with_base: {:?}", end);
 
     (sk_f, sk_red_nondecomp)
 }
@@ -391,7 +374,7 @@ pub fn qe_dec(
 
     let out_ipe = ipe_dec(&sk_f, &enc_h, &grp, false);
     let out_ipe_inv = out_ipe.clone().invert(&grp.n_sq).unwrap();
-        
+
     let val_mult = (val_mult * out_ipe_inv.clone()) % &grp.n_sq;
     discrete_logarithm(val_mult, &grp)
 }

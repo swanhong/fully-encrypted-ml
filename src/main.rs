@@ -189,7 +189,7 @@ fn run_protocol_with_ml_data() {
     .expect("Duration since UNIX_EPOCH failed");
     rng.seed(&Integer::from(d.as_secs()));
     
-    let grp = Group::new(100); // Initialize the group        
+    let grp = Group::new(3072); // Initialize the group        
     // println!("{}", grp);
 
     let scale = 1048576; // 2^20
@@ -197,7 +197,7 @@ fn run_protocol_with_ml_data() {
     let sk_bound = Integer::from(10);
     let decomp = Decomp::new(4, &grp);
 
-    let dataset = "breast";
+    let dataset = "iris";
     let file_x_test = format!("plain_model/{}/x_test.csv", dataset);
     let file_layer1_weight = format!("plain_model/{}/input_layer.weight.csv", dataset);
     let file_layer1_bias = format!("plain_model/{}/input_layer.bias.csv", dataset);
