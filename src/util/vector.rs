@@ -70,34 +70,39 @@ pub fn vec_mod(vec: &mut Vec<Integer>, modulus: &Integer) {
 //     // out
 // }
 
+// pub fn vec_inner_pow(v_base: &Vec<Integer>, v_exp: &Vec<Integer>, grp: &Group) -> Integer {
+//     assert_eq!(v_base.len(), v_exp.len());
+    
+//     let modulo = &grp.n_sq;
+//     let mut out = Integer::from(1);
+
+//     for (base, exp) in v_base.iter().zip(v_exp.iter()) {
+//         let val: Integer = base.clone().pow_mod(exp, modulo).unwrap();
+//         let (_, val) = val.div_rem_ref(modulo).complete();
+//         out *= val;
+//         let (_, out) = out.div_rem_ref(modulo).complete();
+//     }
+
+//     out
+// }
+
+
 pub fn vec_inner_pow(v_base: &Vec<Integer>, v_exp: &Vec<Integer>, grp: &Group) -> Integer {
     assert_eq!(v_base.len(), v_exp.len());
     
     let modulo = &grp.n_sq;
-    let mut out = Integer::from(1);
+    let out = Integer::from(1);
 
-    for (base, exp) in v_base.iter().zip(v_exp.iter()) {
-        let start = SystemTime::now();
+    v_base.par_iter().zip(v_exp.par_iter()).for_each(|(base, exp)| {
         let val: Integer = base.clone().pow_mod(exp, modulo).unwrap();
-        let end = start.elapsed();
-        // println!("      Time elapsed in vec_inner_pow::pow_mod is: {:?}", end);
-        let start = SystemTime::now();
         let (_, val) = val.div_rem_ref(modulo).complete();
-        let end = start.elapsed();
-        // println!("      Time elapsed in vec_inner_pow::div_rem_ref is: {:?}", end);
-        let start = SystemTime::now();
-        out *= val;
-        let end = start.elapsed();
-        // println!("      Time elapsed in vec_inner_pow::mul is: {:?}", end);
-        let start = SystemTime::now();
+        
+        let out = out.clone() * val;
         let (_, out) = out.div_rem_ref(modulo).complete();
-        let end = start.elapsed();
-        // println!("      Time elapsed in vec_inner_pow::div_rem_ref is: {:?}", end);
-    }
+    });
 
     out
 }
-
 
 pub fn vec_exp_with_base(base: &Integer, v_exp: &Vec<Integer>, modulo: &Integer) -> Vec<Integer> {
     // let mut out = vec![Integer::from(0); v_exp.len()];

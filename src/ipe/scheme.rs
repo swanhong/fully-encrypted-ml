@@ -136,7 +136,7 @@ pub fn ipe_dec(sk_f: &Vec<Integer>, ctxt: &Vec<Integer>, grp: &Group, solve_dl: 
     let start = SystemTime::now();
     let mut out = vec_inner_pow(&sk_f, &ctxt, &grp);
     let end = start.elapsed();
-    // println!("Time elapsed in ipe_dec::vec_inner_pow is: {:?} for {} pow_mod", end, sk_f.len());
+    println!("Time elapsed in ipe_dec::vec_inner_pow is: {:?} for {} pow_mod", end, sk_f.len());
     if solve_dl {
         out = discrete_logarithm(out.clone(), &grp);
     }

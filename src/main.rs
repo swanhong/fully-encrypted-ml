@@ -189,7 +189,7 @@ fn run_protocol_with_ml_data() {
     .expect("Duration since UNIX_EPOCH failed");
     rng.seed(&Integer::from(d.as_secs()));
     
-    let grp = Group::new(3072); // Initialize the group        
+    let grp = Group::new(100); // Initialize the group        
     // println!("{}", grp);
 
     let scale = 1048576; // 2^20
