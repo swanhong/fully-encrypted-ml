@@ -3,10 +3,11 @@ extern crate rug;
 use rug::Integer;
 use rug::rand::RandState;
 
+use std::ops::MulAssign;
 use std::time::SystemTime;
 
 use crate::util::group::Group;
-use crate::util::vector::int_mod;
+use crate::util::vector::{vec_exp_with_base, vec_pow, int_mod, vec_mod};
 
 // takes input of dimension, secret key bound, and group
 // returns a key pair (sk, pk)
@@ -17,16 +18,12 @@ pub fn dcr_setup(
     rng: &mut RandState<'_>,
 ) -> (Vec<Integer>, Vec<Integer>) {
     let mut sk = vec![Integer::from(0); dim];
-    let mut pk = vec![Integer::from(0); dim];
-        
     for i in 0..dim {
         sk[i] = sk_bound.clone().random_below(rng);
     }
 
-    for i in 0..dim {
-        pk[i] = grp.g.clone().pow_mod(&sk[i], &grp.n_sq).unwrap();
-    }
-    
+    let pk = vec_exp_with_base(&grp.g, &sk, &grp.n_sq);
+
     (sk, pk)
 }
 
@@ -40,24 +37,21 @@ pub fn dcr_keygen(sk: &Vec<Integer>, y: &Vec<Integer>) -> Integer {
     sk_y
 }
 
-pub fn dcr_enc(pk: &Vec<Integer>, x: &Vec<Integer>, grp: &Group) -> Vec<Integer> {
+pub fn dcr_enc(pk: &Vec<Integer>, x: &Vec<Integer>, grp: &Group, rand: &mut RandState<'_>) -> Vec<Integer> {
     assert!(pk.len() == x.len());
-    
-    let mut ct_x = vec![Integer::from(0); x.len() + 1];
-    
-    let mut rand = RandState::new(); // Create a single RandState object
-    let d = SystemTime::now()
-    .duration_since(SystemTime::UNIX_EPOCH)
-    .expect("Duration since UNIX_EPOCH failed");
-    rand.seed(&Integer::from(d.as_secs()));
 
-    let r: Integer = grp.n_sq.clone().random_below(&mut rand);
-    ct_x[x.len()] = grp.g.clone().pow_mod(&r, &grp.n_sq).unwrap();
+    let r: Integer = grp.n_sq.clone().random_below(rand);
+    let ct_x_last = grp.g.clone().pow_mod(&r, &grp.n_sq).unwrap();
+    let mut x_encode = vec![Integer::from(0); x.len()];
     for i in 0..x.len() {
-        let encode = &x[i] * &grp.n + Integer::from(1);
-        ct_x[i] = pk[i].clone().pow_mod(&r, &grp.n_sq).unwrap() * encode;
-        ct_x[i] = ct_x[i].clone().div_rem_euc(grp.n_sq.clone()).1;
+        x_encode[i] = x[i].clone() * &grp.n + Integer::from(1);
     }
+    let mut ct_x = vec_pow(&pk, &r, &grp.n_sq);
+    ct_x.iter_mut()
+    .zip(x_encode.iter_mut())
+    .for_each(|(val, x_encode)| val.mul_assign(x_encode.clone()));
+    ct_x.push(ct_x_last);
+    vec_mod(&mut ct_x, &grp.n_sq);
     ct_x
 }
 

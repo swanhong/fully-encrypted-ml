@@ -43,51 +43,19 @@ pub fn vec_mod(vec: &mut Vec<Integer>, modulus: &Integer) {
     }
 }
 
-// use rug::ops::MulFrom;
-// use rug::ops::RemFrom;
-// pub fn vec_inner_pow(v_base: &Vec<Integer>, v_exp: &Vec<Integer>, grp: &Group) -> Integer {
-//     assert_eq!(v_base.len(), v_exp.len());
-    
-//     let modulo = &grp.n_sq;
-//     let mut out = Integer::from(1);
+pub fn vec_pow(vec: &[Integer], exp: &Integer, modulus: &Integer) -> Vec<Integer> {
+    vec.par_iter()
+        .map(|val| val.clone().pow_mod(exp, modulus).unwrap())
+        .collect()
+}
 
-//     for (base, exp) in v_base.iter().zip(v_exp.iter()) {
-//         let val: Integer = base.clone().pow_mod(exp, modulo).unwrap();
-//         out.mul_from(&val);
-//         // out.rem_from(modulo);
-//         (_, out) = out.div_rem(modulo.clone());
-//         // out = out.mul(val % modulo;
-//     }
-
-//     out
-
-//     // for i in 0..v_base.len() {
-//     //     let val: Integer = v_base[i].clone().pow_mod(&v_exp[i], &modulo).unwrap();
-//     //     if i == 0 {
-//     //         out = val.clone();
-//     //     } else {
-//     //         out = out * val % &modulo;
-//     //     }
-//     // }
-//     // out
-// }
-
-// pub fn vec_inner_pow(v_base: &Vec<Integer>, v_exp: &Vec<Integer>, grp: &Group) -> Integer {
-//     assert_eq!(v_base.len(), v_exp.len());
-    
-//     let modulo = &grp.n_sq;
-//     let mut out = Integer::from(1);
-
-//     for (base, exp) in v_base.iter().zip(v_exp.iter()) {
-//         let val: Integer = base.clone().pow_mod(exp, modulo).unwrap();
-//         // let (_, val) = val.div_rem_ref(modulo).complete();
-//         let val = int_mod(&val, modulo);
-//         out *= val;
-//         out = int_mod(&out, modulo);
-//     }
-
-//     out
-// }
+pub fn vec_pow_by_vec(vec: &[Integer], exp: &[Integer], modulus: &Integer) -> Vec<Integer> {
+    assert_eq!(vec.len(), exp.len());   
+    vec.par_iter()
+        .zip(exp.par_iter())
+        .map(|(val, exp)| val.clone().pow_mod(exp, modulus).unwrap())
+        .collect()
+}
 
 pub fn vec_inner_pow(v_base: &Vec<Integer>, v_exp: &Vec<Integer>, grp: &Group) -> Integer {
     assert_eq!(v_base.len(), v_exp.len());
@@ -106,14 +74,6 @@ pub fn vec_inner_pow(v_base: &Vec<Integer>, v_exp: &Vec<Integer>, grp: &Group) -
 }
 
 pub fn vec_exp_with_base(base: &Integer, v_exp: &Vec<Integer>, modulo: &Integer) -> Vec<Integer> {
-    // let mut out = vec![Integer::from(0); v_exp.len()];
-    // for i in 0..v_exp.len() {
-    //     let start = SystemTime::now();
-    //     out[i] = base.clone().pow_mod(&v_exp[i], &modulo).unwrap();
-    //     let end = start.elapsed();
-    //     println!("      Time elapsed in vec_exp_with_base::pow_mod is: {:?}", end);
-    // }
-    // out
     v_exp.par_iter()
         .map(|exp| base.clone().pow_mod(exp, modulo).unwrap())
         .collect()

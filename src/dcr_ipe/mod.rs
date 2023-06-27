@@ -20,7 +20,7 @@ mod test {
     println!("bound: {}", bound);
 
     let grp = Group::new(bit_len);
-
+    println!("grp: {}", grp);
     // define random Integer vector of dimension m
     let d = SystemTime::now()
     .duration_since(SystemTime::UNIX_EPOCH)
@@ -33,8 +33,8 @@ mod test {
         x[i] = bound.clone().random_below(&mut rand);
         y[i] = bound.clone().random_below(&mut rand);
     }
-    // println!("x: {:?}", x);
-    // println!("y: {:?}", y);
+    println!("x: {:?}", x);
+    println!("y: {:?}", y);
     
 
     let start = Instant::now();
@@ -51,7 +51,7 @@ mod test {
     // println!("sk_y: {}", sk_y);
     
     let start = Instant::now();
-    let ct_x = dcr_enc(&pk, &x, &grp);
+    let ct_x = dcr_enc(&pk, &x, &grp, &mut rand);
     let end = start.elapsed();
     println!("Time elapsed in dcr_enc is: {:?}", end);
     // println!("ct_x: {:?}", ct_x);
