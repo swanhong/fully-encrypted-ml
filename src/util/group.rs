@@ -22,8 +22,8 @@ impl Group {
         let mut p;
         let mut q;
         if bit_len == 10 {
-            p = Integer::from(53);
-            q = Integer::from(59);
+            p = Integer::from(103);
+            q = Integer::from(87);
         }else if bit_len == 100 {
             p = Integer::from_str_radix("6122421090493547576937037317561418841225758554253106999", 10).unwrap();
             q = Integer::from_str_radix("5846418214406154678836553182979162384198610505601062333", 10).unwrap();

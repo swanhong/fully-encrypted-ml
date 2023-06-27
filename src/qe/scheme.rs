@@ -301,9 +301,7 @@ pub fn qe_enc_matrix_expression(
     let mut enc_h = ipe_enc_mat * m_h_b_1;
     enc_h.mod_inplace(&grp.delta);
 
-    // println!("enc_h size = {} x {}", enc_h.rows, enc_h.cols);
     enc_h = decomp.matrix_col(&enc_h);
-
     (enc_x, enc_y, enc_h)
 }
 
@@ -349,12 +347,16 @@ pub fn qe_enc_matrix_same_xy(
         for j in 0..n_x {
             let mut val1 = qe_enc_h_origin.get(i, j);
             let val2 = qe_enc_h_origin.get(i, j + n_x);
-            val1 = ((val1 * &grp.mu) + val2) % &modulo;
+            let tmp = (val1 * &grp.mu) + val2;
+            val1 = int_mod(&tmp, &modulo);
+            // val1 = ((val1 * &grp.mu) + val2) % &modulo;
             qe_enc_h_nodecomp.set(i, j, val1);
         }
         let mut val1 = qe_enc_h_origin.get(i, 2 * n_x);
         let val2 = qe_enc_h_origin.get(i, 2 * n_x + 1);
-        val1 = (val1 + val2) % &modulo;
+        let tmp = val1 + val2;
+        val1 = int_mod(&tmp, &modulo);
+        // val1 = (val1 + val2) % &modulo;
         qe_enc_h_nodecomp.set(i, n_x, val1);
     }
     let enc_h = decomp.matrix_col(&qe_enc_h_nodecomp);
@@ -375,6 +377,8 @@ pub fn qe_dec(
     let out_ipe = ipe_dec(&sk_f, &enc_h, &grp, false);
     let out_ipe_inv = out_ipe.clone().invert(&grp.n_sq).unwrap();
 
-    let val_mult = (val_mult * out_ipe_inv.clone()) % &grp.n_sq;
+    let val = val_mult * out_ipe_inv.clone();
+    let val_mult = int_mod(&val, &grp.n_sq);
+    // let val_mult = (val_mult * out_ipe_inv.clone()) % &grp.n_sq;
     discrete_logarithm(val_mult, &grp)
 }

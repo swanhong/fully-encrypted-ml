@@ -13,19 +13,19 @@ mod tests {
     #[test]
     fn test_qe_start_to_end() {
         let mut rand = RandState::new(); // Create a single RandState object
-        // let d = SystemTime::now()
-        // .duration_since(SystemTime::UNIX_EPOCH)
-        // .expect("Duration since UNIX_EPOCH failed");
-        // rand.seed(&Integer::from(d.as_secs()));
+        let d = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .expect("Duration since UNIX_EPOCH failed");
+        rand.seed(&Integer::from(d.as_secs()));
         
-        let grp = Group::new(10); // Initialize the group        
+        let grp = Group::new(100); // Initialize the group        
         // println!("{}", grp);
         
-        let n_x = 6;
-        let n_y = 6;
+        let n_x = 4;
+        let n_y = 4;
         let b = 2 * n_x + 1;
         // let b = 1;
-        let bound = 3;
+        let bound = 100;
 
         let decomp = Decomp::new(4, &grp);
         // println!("decomp = {}", decomp);
@@ -33,9 +33,17 @@ mod tests {
         let mut x = gen_random_vector(n_x, &Integer::from(bound), &mut rand);
         let mut y = gen_random_vector(n_y, &Integer::from(bound), &mut rand);
         let mut f = gen_random_vector(n_x * n_y, &Integer::from(bound), &mut rand);
-        // x[0] = Integer::from(12);
-        // y[0] = Integer::from(4);
-        // f[0] = Integer::from(9);
+        
+        
+        for i in 0..n_x {
+            x[i] -= Integer::from(bound / 2);
+        }
+        for i in 0..n_y {
+            y[i] -= Integer::from(bound / 2);
+        }
+        for i in 0..n_x * n_y {
+            f[i] -= Integer::from(bound / 2);
+        }        
 
         // Perform setup
         let start = SystemTime::now();
@@ -53,7 +61,7 @@ mod tests {
 
         // println!("sk_f: {:?}", sk_f);
         // println!("sk_red: {:?}", sk_red);
-        println!("lengths are {} and {}", sk_f.len(), sk_red.len());
+        // println!("lengths are {} and {}", sk_f.len(), sk_red.len());
 
         let original = false;
         
@@ -80,9 +88,9 @@ mod tests {
             // println!("enc_mat_y: {}", enc_mat_y);
             // println!("enc_mat_h: {}", enc_mat_h);
 
-            println!("sizes are {} and {}", enc_mat_x.rows, enc_mat_x.cols);
-            println!("sizes are {} and {}", enc_mat_y.rows, enc_mat_y.cols);
-            println!("sizes are {} and {}", enc_mat_h.rows, enc_mat_h.cols);
+            // println!("sizes are {} and {}", enc_mat_x.rows, enc_mat_x.cols);
+            // println!("sizes are {} and {}", enc_mat_y.rows, enc_mat_y.cols);
+            // println!("sizes are {} and {}", enc_mat_h.rows, enc_mat_h.cols);
 
             // generate ctxt from matrix representation
             let x_mu: Vec<Integer> = vec_mul_scalar(&x, &grp.mu);
@@ -131,8 +139,8 @@ mod tests {
         println!("x = {:?}", x);
         println!("y = {:?}", y);
         println!("f = {:?}", f);
-        println!("out: {}", out);
-        println!("out2: {}", out2);
+        println!("out eval  : {}", out);
+        println!("out plain : {}", out2);
         assert_eq!(out, out2);
 
     }

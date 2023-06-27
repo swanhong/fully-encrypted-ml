@@ -26,7 +26,8 @@ pub fn ipe_keygen(sk: &IpeSk, y: &Vec<Integer>, grp: &Group) -> Vec<Integer> {
         val = Integer::from(0);
         for j in 0..sk.u_t.cols {
             val -= sk.u_t.get(i, j).clone() * y[j].clone();
-            val = val.clone().div_rem_euc(mod_val.clone()).1;
+            // val = val.clone().div_rem_euc(mod_val.clone()).1;
+            val = int_mod(&val, &mod_val);
         }
         u_t_y_left.push(val);
     }
@@ -136,7 +137,7 @@ pub fn ipe_dec(sk_f: &Vec<Integer>, ctxt: &Vec<Integer>, grp: &Group, solve_dl: 
     let start = SystemTime::now();
     let mut out = vec_inner_pow(&sk_f, &ctxt, &grp);
     let end = start.elapsed();
-    println!("Time elapsed in ipe_dec::vec_inner_pow is: {:?} for {} pow_mod", end, sk_f.len());
+    // println!("Time elapsed in ipe_dec::vec_inner_pow is: {:?} for {} pow_mod", end, sk_f.len());
     if solve_dl {
         out = discrete_logarithm(out.clone(), &grp);
     }

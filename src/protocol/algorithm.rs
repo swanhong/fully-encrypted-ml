@@ -114,7 +114,7 @@ pub fn matrix_inverse(
     }
 }
 
-pub fn sample_h(dim: usize, k: usize, modulo: &Integer, rng: &mut RandState<'_>) -> (Matrix, Matrix) {
+pub fn sample_h_origin(dim: usize, k: usize, modulo: &Integer, rng: &mut RandState<'_>) -> (Matrix, Matrix) {
     // sample two matrices h_left_1 and h_right_1
     
     // h_left is dim * (dim + k ) ternary matrix
@@ -147,12 +147,58 @@ pub fn sample_h(dim: usize, k: usize, modulo: &Integer, rng: &mut RandState<'_>)
 
     }
     
-    let h_pr_0 = h_t * h_0_inv;
+    let mut h_pr_0 = h_t * h_0_inv;
+    println!("before mod, h_pr_0 = {:?}", h_pr_0);
+    h_pr_0.mod_inplace(modulo);
+    println!("after mod, h_pr_0 = {:?}", h_pr_0);
 
     let h = concatenate_diag_one(&h_0);
     let h_pr = concatenate_diag_one(&h_pr_0);
 
     (h, h_pr)
+}
+
+pub fn sample_h(dim: usize, k: usize, modulo: &Integer, rng: &mut RandState<'_>) -> (Matrix, Matrix) {
+    // sample two matrices h_left_1 and h_right_1
+    
+    // h_right is (dim + k) * dim ternary matrix
+    // h_left is dim * (dim + k) matrix satisfying h_left * h_right = identity_dim
+
+    // h_right = h (ternary)
+    // h_left =(h^t * h)^-1 * h^t
+    // h_left_1 = (h_left, 1)
+    // h_right_1 = (h_right, 1)
+
+    let mut h_0: Matrix = Matrix::new(dim + k, dim);
+    let mut h_t: Matrix = Matrix::new(dim, dim + k);
+    let mut h_0_inv: Matrix = Matrix::new(dim, dim);
+    while true {
+        // sample ternary h_0
+        h_0 = Matrix::random(dim + k, dim, &Integer::from(3), rng);
+        h_0.add_int_inplace(&Integer::from(-1));
+
+        h_t = h_0.transpose();
+        // tmp = (h^t * h)
+        let mut tmp = h_t.clone() * h_0.clone();
+        tmp.mod_inplace(modulo);
+        match matrix_inverse(&mut tmp, modulo) {
+            Ok(m_inv) => {
+                h_0_inv = m_inv.clone();
+                break;
+            }
+            Err(rank) => {
+                continue;
+            }
+        }
+    }
+    
+    let mut h_left = h_0_inv * h_t;
+    h_left.mod_inplace(modulo);
+
+    let h_right_0 = concatenate_diag_one(&h_0);
+    let h_left_0 = concatenate_diag_one(&h_left);
+
+    (h_left_0, h_right_0)
 }
 
 pub fn sample_gamma(
@@ -190,7 +236,8 @@ pub fn sample_gamma(
     }
     
 
-    let gamma_pr_0 = gamma_0_t * gamma_0_inv;
+    let mut gamma_pr_0 = gamma_0_t * gamma_0_inv;
+    gamma_pr_0.mod_inplace(modulo);
 
     let gamma_1 = concatenate_diag_one(&gamma_0);
     let gamma_pr_1 = concatenate_diag_one(&gamma_pr_0);

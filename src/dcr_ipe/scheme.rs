@@ -5,7 +5,8 @@ use rug::rand::RandState;
 
 use std::time::SystemTime;
 
-use crate::util::group::{Group};
+use crate::util::group::Group;
+use crate::util::vector::int_mod;
 
 // takes input of dimension, secret key bound, and group
 // returns a key pair (sk, pk)
@@ -68,15 +69,20 @@ pub fn dcr_dec(ct_x: &Vec<Integer>, y: &Vec<Integer>, sk_y: &Integer, grp: &Grou
     
     for i in 0..ct_x.len()-1 {
         out *= ct_x[i].clone().pow_mod(&y[i], &grp.n_sq).unwrap();
+        out = int_mod(&out, &grp.n_sq);
     }
     let num = 
             ct_x[dim].clone().pow_mod(&sk_y, &grp.n_sq).unwrap()
             .invert(&grp.n_sq).unwrap();
     out *= num;
-    out = out.div_rem_euc(grp.n_sq.clone()).1;
+    // out = out.div_rem_euc(grp.n_sq.clone()).1;
+    out = int_mod(&out, &grp.n_sq);
     // out = (out - 1) / &grp.n;
     out = out - 1;
-    let (quo, rem) = out.div_rem(grp.n.clone());
+    let mut quo = out.clone();
+    let mut rem = grp.n.clone();
+    quo.div_rem_mut(&mut rem);
+    // let (quo, rem) = out.div_rem(grp.n.clone());
     assert!(rem == Integer::from(0), "Remainder is not 0");
     quo
 }

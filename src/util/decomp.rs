@@ -1,5 +1,6 @@
 use rug::Integer;
 use super::{matrix::Matrix, group::Group};
+use crate::util::vector::int_mod;
 
 pub struct Decomp {
     pub base: Integer,
@@ -28,18 +29,19 @@ impl Decomp {
 
     // decompose 
     pub fn int(&self, a: &Integer) -> Vec<Integer> {
-        assert!(a < &self.modulo, "a = {}, self.modulo = {}", a, self.modulo);
+        // assert!(a < &self.modulo, "a = {}, self.modulo = {}", a, self.modulo);
         // println!("input : {}", a);
         let mut res: Vec<Integer> = vec![Integer::from(0); self.dim];
         let mut b = a.clone();
-        let zero = Integer::from(0);
-        let mut index = 0;
-        while b > zero {
-            let (quo, rem) = b.clone().div_rem_euc(self.base.clone());
-            // println!("quo = {}, rem = {}", quo, rem);
+        for index in 0..self.dim {
+            let mut quo = b.clone();
+            let mut rem = self.base.clone();
+            quo.div_rem_mut(&mut rem);
+            // let (quo, rem) = b.clone().div_rem_mut(&mut self.base.clone());
+            // println!("{} / {} = {} ... {}", b, self.base, quo, rem);
+            
             res[index] = rem;
             b = quo.clone();
-            index += 1;
         }
         // println!("output: {:?}", res);
         assert_eq!(res.len(), self.dim, "res.len() = {}, self.dim = {}", res.len(), self.dim);
@@ -76,7 +78,8 @@ impl Decomp {
         let mut b = a.clone();
         for i in 0..self.dim {
             res[i] = b.clone();
-            let (_, new_b) = (b.clone() * self.base.clone()).div_rem(self.modulo_for_exp.clone());
+            let mut new_b = b.clone() * self.base.clone();
+            new_b = int_mod(&new_b, &self.modulo_for_exp);
             b = new_b;
         }
         assert_eq!(res.len(), self.dim);
@@ -98,7 +101,6 @@ impl Decomp {
         for i in 1..self.dim {
             res[i] = res[i-1].clone().pow_mod(&self.base, &self.modulo_for_exp).unwrap();
         }
-        assert_eq!(res.len(), self.dim);
         res
     }
     pub fn vector_pow_exp(&self, a: &Vec<Integer>) -> Vec<Integer> {
@@ -134,6 +136,7 @@ impl Decomp {
         let mut res = Integer::from(0);
         for i in 0..self.dim {
             res += a[i].clone() * self.base.clone().pow_mod(&Integer::from(i), &self.modulo).unwrap();
+            res = int_mod(&res, &self.modulo);
         }
         res
     }

@@ -1,7 +1,7 @@
 use rug::{Integer, rand::RandState};
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::str::FromStr;
-use crate::util::vector::{gen_random_vector, tensor_product_vecs};
+use crate::util::vector::{gen_random_vector, tensor_product_vecs, int_mod};
 
 #[derive(Clone, Debug)]
 pub struct Matrix {
@@ -241,10 +241,11 @@ impl Matrix {
         for i in 0..self.rows {
             for j in 0..self.cols {
                 let val = self.data[i * self.cols + j].clone();
-                (_, self.data[i * self.cols + j]) = val.div_rem(modulo.clone());
-                if self.data[i * self.cols + j] < 0 {
-                    self.data[i * self.cols + j] += modulo.clone();
-                }
+                self.data[i * self.cols + j] = int_mod(&val, modulo);
+                // (_, self.data[i * self.cols + j]) = val.div_rem(modulo.clone());
+                // if self.data[i * self.cols + j] < 0 {
+                //     self.data[i * self.cols + j] += modulo.clone();
+                // }
             }
         }
     }

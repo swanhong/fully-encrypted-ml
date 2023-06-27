@@ -4,7 +4,7 @@ use rug::rand::RandState;
 
 use crate::util::group::Group;
 use crate::util::matrix::{Matrix, concatenate_diag_one, remove_diag_one};
-use crate::util::vector::{vec_add, vec_mul_scalar};
+use crate::util::vector::{vec_add, vec_mod};
 use crate::util::decomp::Decomp;
 use crate::dcr_ipe::scheme::{dcr_setup, dcr_enc, dcr_keygen, dcr_dec};
 use crate::qe::keys::QeSk;
@@ -45,8 +45,8 @@ pub fn protocol_enc_init(
     let mut x1 = x.clone();
     x1.push(Integer::from(1));
 
-    let gamma_right_x = gamma_right.mul_vec(&x1);
-    println!("gamma_rigit_x : \n{:?}", gamma_right_x);
+    let mut gamma_right_x = gamma_right.mul_vec(&x1);
+    vec_mod(&mut gamma_right_x, &grp.delta);
     dcr_enc(dcr_pk, &gamma_right_x, &grp)
 }
 
@@ -62,7 +62,8 @@ pub fn protocol_keygen_switch(
     rng: &mut RandState<'_>,
 ) -> (
     (Matrix, Matrix, Matrix),
-    (Vec<Integer>, Vec<Integer>, Vec<Integer>)
+    (Vec<Integer>, Vec<Integer>, Vec<Integer>),
+    (Matrix, Matrix, Matrix),
 ) {
     let modulo = grp.delta.clone();
     let (qe_enc_mat_x, qe_enc_mat_y, qe_enc_mat_h)
@@ -78,11 +79,11 @@ pub fn protocol_keygen_switch(
     ) -> (Matrix, Vec<Integer>) {
         let mut xh = qe_enc_mat * h_right;
         xh.mod_inplace(modulo);
+        let mut switch_key_x = xh * gamma_left;
 
         // let xh_decomp = decomp.matrix_col(&xh);
         // let mut switch_key_x = xh_decomp * gamma_left;
 
-        let mut switch_key_x = xh * gamma_left;
         switch_key_x.mod_inplace(modulo);
 
         let mut switch_key_dcr_x = vec![Integer::from(0); switch_key_x.rows];
@@ -120,10 +121,12 @@ pub fn protocol_keygen_switch(
         &decomp,
         &modulo,
     );
-    println!("h_right = \n{}", h_right);
-    println!("Gamma_left = \n{}", gamma_left);
 
-    ((switch_key_x, switch_key_y, switch_key_h), (switch_key_dcr_x, switch_key_dcr_y, switch_key_dcr_h))
+    (
+        (switch_key_x, switch_key_y, switch_key_h),
+        (switch_key_dcr_x, switch_key_dcr_y, switch_key_dcr_h),
+        (qe_enc_mat_x, qe_enc_mat_y, qe_enc_mat_h),
+    )
 }
 
 pub fn protocol_keyswitch(
@@ -145,9 +148,8 @@ pub fn protocol_keyswitch(
         for i in 0..switch_key.rows {
             let row = switch_key.get_row(i);
             ct_out[i] = dcr_dec(&ct_in, &row, &switch_key_dcr[i], grp);
-            let val = ct_out[i].clone() - grp.n.clone();
-            // println!("dcr_dec -> ct_out[{}] = {}  ({})", i, ct_out[i].clone(), val);
         }
+        vec_mod(&mut ct_out, &grp.n);
         ct_out
     }
 
@@ -168,7 +170,12 @@ pub fn protocol_keygen_i(
     decomp: &Decomp,
     grp: &Group,
     rng: &mut RandState<'_>,
-) -> ((Vec<Integer>, Vec<Integer>, Vec<Integer>), (Matrix, Matrix, Matrix), (Matrix, Matrix, Matrix)) {
+) -> (
+    (Vec<Integer>, Vec<Integer>, Vec<Integer>), 
+    (Matrix, Matrix, Matrix), 
+    (Matrix, Matrix, Matrix),
+    (Matrix, Matrix, Matrix),
+) {
     let (qe_enc_mat_x, qe_enc_mat_y, qe_enc_mat_h) = qe_enc_matrix_same_xy(&qe_sk_enc, dim + k, &grp, &decomp, rng);
     
     // divide enc_mats into M * b
@@ -217,9 +224,9 @@ pub fn protocol_keygen_i(
         ab.mod_inplace(&modulo);
         let mut cd = c * d;
         cd.mod_inplace(&modulo);
-        let ab_decomp = ab;
+        let ab_decomp = ab.clone();
         // let ab_decomp = decomp.matrix_col(&ab);
-        let mut out = ab_decomp * cd;
+        let mut out = ab_decomp * cd.clone();
         out.mod_inplace(&modulo);
         out
     }
@@ -259,7 +266,12 @@ pub fn protocol_keygen_i(
     let (sk_f_mat_x, sk_red_mat_x) = gen_f_and_red(&qe_sk_keygen, total_mat_x, &grp, &decomp);
     let (sk_f_mat_y, sk_red_mat_y) = gen_f_and_red(&qe_sk_keygen, total_mat_y, &grp, &decomp);
     let (sk_f_mat_h, sk_red_mat_h) = gen_f_and_red(&qe_sk_keygen, total_mat_h, &grp, &decomp);
-    ((qe_b_x, qe_b_y, qe_b_h), (sk_f_mat_x, sk_f_mat_y, sk_f_mat_h), (sk_red_mat_x, sk_red_mat_y, sk_red_mat_h))
+    (
+        (qe_b_x, qe_b_y, qe_b_h), 
+        (sk_f_mat_x, sk_f_mat_y, sk_f_mat_h), 
+        (sk_red_mat_x, sk_red_mat_y, sk_red_mat_h),
+        (qe_enc_mat_x, qe_enc_mat_y, qe_enc_mat_h)
+    )
 }
 
 pub fn protocol_dec_i(
@@ -295,21 +307,10 @@ pub fn protocol_dec_i(
             // let start = SystemTime::now();
 
             ct_out[i] =qe_dec((&sk_f, &sk_red), ctxt_triple, grp, decomp);
-            // println!("ct_out[{}] = {}, grp.n = {}", i, ct_out[i], grp.n);
-
-            // println!("run enc_x_decomp");
-            // let enc_x_decomp = decomp.vector(&ctxt_triple.0);
-            // println!("run enc_x_decomp");
-            // let enc_y_decomp = decomp.vector(&ctxt_triple.1);
-            // println!("run enc_x_decomp");
-            // let enc_h_decomp = decomp.vector(&ctxt_triple.2);
-            // println!("check");
-            // let ctxt_triple_decomp = (&enc_x_decomp, &enc_y_decomp, &enc_h_decomp);
-            // ct_out[i] =qe_dec((&sk_f, &sk_red), ctxt_triple_decomp, grp, decomp);
-            // let end = start.elapsed();
-            // println!("Time elapsed in qe_dec is: {:?}", end);
         }
-        vec_add(&ct_out, &qe_b)
+        ct_out = vec_add(&ct_out, &qe_b);
+        vec_mod(&mut ct_out, &grp.n);
+        ct_out
     }
 
     let ct_out_x = compute_f_red_out(
@@ -378,7 +379,6 @@ pub fn protocol_dec_end(
 
     let mut ct_out = vec![Integer::from(0); sk_f_mat.rows];
     for i in 0..sk_f_mat.rows {
-        println!("i = {}", i);
         let sk_f = sk_f_mat.get_row(i);
         let sk_red = sk_red_mat.get_row(i);
         ct_out[i] =qe_dec((&sk_f, &sk_red), (&ct_in_x, &ct_in_y, &ct_in_h), grp, decomp);

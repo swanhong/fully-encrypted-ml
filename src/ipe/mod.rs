@@ -26,11 +26,13 @@ mod tests {
         let b = dim * 2 + 1;
         let bound = 10;
         // Generate random inputs for sk and y
-        let x = gen_random_vector(dim, &Integer::from(bound), &mut rand);
-        let y = gen_random_vector(dim, &Integer::from(bound), &mut rand);
-        
-        // println!("x = {:?}", x);
-        // println!("y = {:?}", y);
+        let mut x = gen_random_vector(dim, &Integer::from(bound), &mut rand);
+        let mut y = gen_random_vector(dim, &Integer::from(bound), &mut rand);
+
+        for i in 0..dim {
+            x[i] -= Integer::from(bound / 2);
+            y[i] -= Integer::from(bound / 2);
+        }        
 
         // Perform setup
         let start = SystemTime::now();
@@ -48,7 +50,7 @@ mod tests {
         // println!("sk_f: {:?}", sk_f);
 
         // Perform encryption
-        let original = true;
+        let original = false;
         let mut ctxt: Vec<Integer> = Vec::new();
         let start = SystemTime::now();
         if original {
@@ -65,7 +67,7 @@ mod tests {
             let mut x1 = x.clone();
             x1.push(Integer::from(1));
             // let start = SystemTime::now();
-            let mut ctxt = ipe_enc_mat * x1.clone();
+            ctxt = ipe_enc_mat * x1.clone();
             vec_mod(&mut ctxt, &grp.delta);
             // println!("ctxt: {:?}", ctxt);
         }
@@ -77,14 +79,17 @@ mod tests {
         let out = ipe_dec(&sk_f, &ctxt, &grp, true);
         let end = start.elapsed();
         println!("Time elapsed in ipe_dec is: {:?}", end);
-        println!("out: {:?}", out);
         
         // check inner product between x and y
         let mut out2 = Integer::from(0);
         for i in 0..x.len() {
             out2 += x[i].clone() * y[i].clone();
         }
-        println!("out2: {:?}", out2);
+
+        println!("x = {:?}", x);
+        println!("y = {:?}", y);
+        println!("out eval  : {}", out);
+        println!("out plain : {}", out2);
 
         assert_eq!(out, out2);
 

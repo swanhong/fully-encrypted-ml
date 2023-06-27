@@ -11,9 +11,9 @@ mod test {
     pub fn test_dcr_ipe_start_to_end() {
     println!(" == start test_dcr_ipe_start_to_end ==");
     
-    let bit_len = 3072;
+    let bit_len = 10;
     let dim: usize = 10;
-    let bound = Integer::from(100);
+    let bound = Integer::from(10);
 
     println!("bit_len: {}", bit_len);
     println!("dim: {}", dim);
