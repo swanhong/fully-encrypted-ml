@@ -64,18 +64,20 @@ pub fn protocol_keygen_switch(
 ) {
     let modulo = grp.delta.clone();
     let (qe_enc_mat_x, qe_enc_mat_y, qe_enc_mat_h)
-        = qe_enc_matrix_same_xy(&qe_sk, dim + k, &grp, &decomp, rng);
+        = qe_enc_matrix_same_xy(&qe_sk, dim + k, &grp, &decomp, rng, true);
     
     fn gen_switch_key_for_enc_and_dcr(
         dcr_sk: &Vec<Integer>,
         qe_enc_mat: &Matrix,
         h_right: &Matrix,
         gamma_left: &Matrix,
+        decomp: &Decomp,
         modulo: &Integer,
     ) -> (Matrix, Vec<Integer>) {
         let mut xh = qe_enc_mat * h_right;
         xh.mod_inplace(modulo);
-        let mut switch_key_x = xh * gamma_left;
+        let xh_decomp = decomp.matrix_col(&xh);
+        let mut switch_key_x = xh_decomp * gamma_left;
 
         switch_key_x.mod_inplace(modulo);
 
@@ -93,6 +95,7 @@ pub fn protocol_keygen_switch(
         &qe_enc_mat_x,
         &h_right,
         &gamma_left,
+        &decomp,
         &modulo,
     );
 
@@ -101,6 +104,7 @@ pub fn protocol_keygen_switch(
         &qe_enc_mat_y,
         &h_right,
         &gamma_left,
+        &decomp,
         &modulo,
     );
 
@@ -109,6 +113,7 @@ pub fn protocol_keygen_switch(
         &qe_enc_mat_h,
         &h_right,
         &gamma_left,
+        &decomp,
         &modulo,
     );
 
@@ -122,6 +127,7 @@ pub fn protocol_keyswitch(
     ct_in: &Vec<Integer>,
     (switch_key_x, switch_key_y, switch_key_h): (&Matrix, &Matrix, &Matrix),
     (switch_key_dcr_x, switch_key_dcr_y, switch_key_dcr_h): (&Vec<Integer>, &Vec<Integer>, &Vec<Integer>),
+    decomp: &Decomp,
     grp: &Group,
 ) -> (Vec<Integer>, Vec<Integer>, Vec<Integer>) {
     
@@ -129,6 +135,7 @@ pub fn protocol_keyswitch(
         ct_in: &Vec<Integer>,
         switch_key: &Matrix,
         switch_key_dcr: &Vec<Integer>,
+        decomp: &Decomp,
         grp: &Group,
     ) -> Vec<Integer> {
         assert_eq!(switch_key.rows, switch_key_dcr.len(), "error in dcr_dec_multi inputs");
@@ -139,12 +146,12 @@ pub fn protocol_keyswitch(
             ct_out[i] = dcr_dec(&ct_in, &row, &switch_key_dcr[i], grp);
         }
         vec_mod(&mut ct_out, &grp.n);
-        ct_out
+        decomp.vector_inv(&ct_out)
     }
 
-    let ct_out_x = dcr_dec_multi(&ct_in, &switch_key_x, &switch_key_dcr_x, &grp);
-    let ct_out_y = dcr_dec_multi(&ct_in, &switch_key_y, &switch_key_dcr_y, &grp);
-    let ct_out_h = dcr_dec_multi(&ct_in, &switch_key_h, &switch_key_dcr_h, &grp);
+    let ct_out_x = dcr_dec_multi(&ct_in, &switch_key_x, &switch_key_dcr_x, &decomp, &grp);
+    let ct_out_y = dcr_dec_multi(&ct_in, &switch_key_y, &switch_key_dcr_y, &decomp, &grp);
+    let ct_out_h = dcr_dec_multi(&ct_in, &switch_key_h, &switch_key_dcr_h, &decomp, &grp);
     (ct_out_x, ct_out_y, ct_out_h)
 }
 
@@ -164,7 +171,7 @@ pub fn protocol_keygen_i(
     (Matrix, Matrix, Matrix), 
     (Matrix, Matrix, Matrix),
 ) {
-    let (qe_enc_mat_x, qe_enc_mat_y, qe_enc_mat_h) = qe_enc_matrix_same_xy(&qe_sk_enc, dim + k, &grp, &decomp, rng);
+    let (qe_enc_mat_x, qe_enc_mat_y, qe_enc_mat_h) = qe_enc_matrix_same_xy(&qe_sk_enc, dim + k, &grp, &decomp, rng, false);
     
     // divide enc_mats into M * b
     pub fn divide_mat_into_m_b(
@@ -187,6 +194,10 @@ pub fn protocol_keygen_i(
     let (qe_enc_mat_y, qe_b_y) = divide_mat_into_m_b(&qe_enc_mat_y);
     let (qe_enc_mat_h, qe_b_h) = divide_mat_into_m_b(&qe_enc_mat_h);
 
+    let qe_b_x = decomp.vector(&qe_b_x);
+    let qe_b_y = decomp.vector(&qe_b_y);
+    let qe_b_h = decomp.vector(&qe_b_h);
+
     let h_right_origin = remove_diag_one(&h_right);
     let hm_left_origin = remove_diag_one(&hm_left);
     let hmhm = Matrix::tensor_product(&hm_left_origin, &hm_left_origin, &grp.delta);
@@ -196,6 +207,7 @@ pub fn protocol_keygen_i(
         b: &Matrix,
         c: &Matrix,
         d: &Matrix,
+        decomp: &Decomp,
         grp: &Group,
     ) -> Matrix {
         // A = Enc, B = H, C = F, D = (H' tensor H')
@@ -203,6 +215,7 @@ pub fn protocol_keygen_i(
         let modulo = grp.delta.clone();
         let mut ab = a * b;
         ab.mod_inplace(&modulo);
+        ab = decomp.matrix_col(&ab);
         let mut cd = c * d;
         cd.mod_inplace(&modulo);
         let mut out = ab * cd;
@@ -211,11 +224,11 @@ pub fn protocol_keygen_i(
     }
 
     let total_mat_x = mat_mul_4(
-        &qe_enc_mat_x, &h_right_origin, &f, &hmhm, &grp);
+        &qe_enc_mat_x, &h_right_origin, &f, &hmhm, &decomp, &grp);
     let total_mat_y = mat_mul_4(
-        &qe_enc_mat_y, &h_right_origin, &f, &hmhm, &grp);
+        &qe_enc_mat_y, &h_right_origin, &f, &hmhm, &decomp, &grp);
     let total_mat_h = mat_mul_4(
-        &qe_enc_mat_h, &h_right_origin, &f, &hmhm, &grp);
+        &qe_enc_mat_h, &h_right_origin, &f, &hmhm, &decomp, &grp);
     
     fn gen_f_and_red(
         qe_sk: &QeSk,
@@ -228,10 +241,7 @@ pub fn protocol_keygen_i(
         println!("do qe_keygen for {} times", total_mat.rows);
         for i in 0..total_mat.rows {
             let row = total_mat.get_row(i);
-            // let start = SystemTime::now();
             let (sk_f, sk_red) = qe_keygen(&qe_sk, &row, grp, decomp);
-            // let end = start.elapsed();
-            // println!("Time elapsed in {}-th qe_keygen is: {:?}", i, end);
             if i == 0 {
                 sk_f_mat = Matrix::new(total_mat.rows, sk_f.len());
                 sk_red_mat = Matrix::new(total_mat.rows, sk_red.len());

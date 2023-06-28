@@ -149,6 +149,7 @@ fn gen_enc_matrix_for_x(
     decomp: &Decomp,
     rng: &mut RandState<'_>,
     mult_mu: bool,
+    is_decomposed: bool,
 ) -> (Matrix, Vec<Integer>) {
     let modulo = grp.delta.clone();
     let mu = grp.mu.clone();
@@ -175,9 +176,12 @@ fn gen_enc_matrix_for_x(
     let enc_x_nondecomp = concatenate_vec_col(&mat_left, &mat_const_term);
 
     // println!("enc_x_nondecomp = {}", enc_x_nondecomp);
-    let enc_x = decomp.matrix_col(&enc_x_nondecomp);
-    // println!("enc_x = {}", enc_x);
-    (enc_x, r_v)
+    if is_decomposed {
+        let enc_x = decomp.matrix_col(&enc_x_nondecomp);
+        return (enc_x, r_v)
+    } else {
+        return (enc_x_nondecomp, r_v)
+    }
 }
 
 
@@ -275,6 +279,7 @@ pub fn qe_enc_matrix_expression(
         decomp,
         rng,
         true,
+        true,
     );
 
     let (enc_y, r_y) = gen_enc_matrix_for_x(
@@ -285,6 +290,7 @@ pub fn qe_enc_matrix_expression(
         decomp,
         rng,
         false,
+        true,
     );
 
     // println!("enc_x size = {} x {}", enc_x.rows, enc_x.cols);
@@ -301,7 +307,7 @@ pub fn qe_enc_matrix_expression(
     let mut enc_h = ipe_enc_mat * m_h_b_1;
     enc_h.mod_inplace(&grp.delta);
 
-    enc_h = decomp.matrix_col(&enc_h);
+    // enc_h = decomp.matrix_col(&enc_h);
     (enc_x, enc_y, enc_h)
 }
 
@@ -311,6 +317,7 @@ pub fn qe_enc_matrix_same_xy(
     grp: &Group,
     decomp: &Decomp,
     rng: &mut RandState<'_>,
+    is_decomposed: bool,
 ) -> (Matrix, Matrix, Matrix) {
     let modulo = grp.delta.clone();
 
@@ -323,6 +330,7 @@ pub fn qe_enc_matrix_same_xy(
         decomp,
         rng,
         false,
+        is_decomposed,
     );
     let (enc_y, r_y) = gen_enc_matrix_for_x(
         &qe_sk.d_y_null,
@@ -332,6 +340,7 @@ pub fn qe_enc_matrix_same_xy(
         decomp,
         rng,
         true,
+        is_decomposed,
     );
 
 
@@ -359,7 +368,11 @@ pub fn qe_enc_matrix_same_xy(
         // val1 = (val1 + val2) % &modulo;
         qe_enc_h_nodecomp.set(i, n_x, val1);
     }
-    let enc_h = decomp.matrix_col(&qe_enc_h_nodecomp);
+    // let enc_h = decomp.matrix_col(&qe_enc_h_nodecomp);
+    let mut enc_h = qe_enc_h_nodecomp.clone();
+    if is_decomposed {
+        enc_h = decomp.matrix_col(&qe_enc_h_nodecomp);
+    }
     (enc_x, enc_y, enc_h)
 }
 

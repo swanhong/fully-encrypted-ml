@@ -201,7 +201,7 @@ mod tests {
         let mut ctxt_h = Vec::new(); 
         // Perform encryption
         let start = SystemTime::now();
-        let (enc_mat_x, enc_mat_y, enc_mat_h) = qe_enc_matrix_same_xy(&qe_sk, n_x, &grp, &decomp, &mut rand);
+        let (enc_mat_x, enc_mat_y, enc_mat_h) = qe_enc_matrix_same_xy(&qe_sk, n_x, &grp, &decomp, &mut rand, true);
         let end = start.elapsed();
         println!("Time elapsed in qe_enc_matrix is: {:?}", end);
 

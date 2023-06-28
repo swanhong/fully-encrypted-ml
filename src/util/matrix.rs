@@ -3,7 +3,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use std::str::FromStr;
 use crate::util::vector::{gen_random_vector, tensor_product_vecs, int_mod};
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Matrix {
     data: Vec<Integer>,
     pub rows: usize,
@@ -100,7 +100,7 @@ impl Matrix {
     }
 
 
-    pub fn Copy(&self) -> Matrix {
+    pub fn copy(&self) -> Matrix {
         let mut matrix = Matrix::new(self.rows, self.cols);
         for i in 0..self.rows {
             for j in 0..self.cols {
@@ -346,6 +346,13 @@ impl fmt::Display for Matrix {
         Ok(())
     }
 }
+
+impl Clone for Matrix {
+    fn clone(&self) -> Matrix {
+        self.clone()
+    }
+}
+
 
 use std::ops::{Add, Sub, Mul, Neg, Rem, RemAssign};
 

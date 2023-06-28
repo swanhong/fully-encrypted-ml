@@ -36,7 +36,7 @@ fn run_protocol_start_to_end(dim_vec: &Vec<usize>, rng: &mut RandState) -> Vec<I
     let bound = 5;
     let sk_bound = Integer::from(10);
 
-    let decomp = Decomp::new(4, &grp);
+    let decomp = Decomp::new(3, &grp);
 
     let x = gen_random_vector(dim, &Integer::from(bound), rng);
     let f1 = Matrix::random_quadratic_tensored(dim, dim2, &Integer::from(bound), &grp.delta, rng);
@@ -72,7 +72,7 @@ fn run_protocol_start_to_end(dim_vec: &Vec<usize>, rng: &mut RandState) -> Vec<I
 
     let (h0_left, h0_right) = sample_h(dim, k, &grp.delta, rng);
     let (h1_left, h1_right) = sample_h(dim2, k, &grp.delta, rng);
-    
+
     let (gamma_left, gamma_right) = sample_gamma(dim, dim, &grp.delta, rng);
     let end = start.elapsed();
     println!("Time elapsed in protocol_setup is: {:?}", end);
@@ -108,6 +108,7 @@ fn run_protocol_start_to_end(dim_vec: &Vec<usize>, rng: &mut RandState) -> Vec<I
         &ctxt_x, 
         (&switch_key_x, &switch_key_y, &switch_key_h),
         (&switch_key_dcr_x, &switch_key_dcr_y, &switch_key_dcr_h),
+        &decomp,
         &grp
     );
     let end = start.elapsed();
@@ -187,14 +188,14 @@ fn run_protocol_with_ml_data() {
     .expect("Duration since UNIX_EPOCH failed");
     rng.seed(&Integer::from(d.as_secs()));
     
-    let bit_len = 3072;
+    let bit_len = 100;
     let grp = Group::new(bit_len); // Initialize the group        
     // println!("{}", grp);
 
-    let scale = 1048576; // 2^20
-    // let scale = 100; // 2^20
+    // let scale = 1048576; // 2^20
+    let scale = 100; // 2^20
     let sk_bound = Integer::from(10);
-    let decomp = Decomp::new(4, &grp);
+    let decomp = Decomp::new(2, &grp);
 
     let dataset = "breast";
     println!("=== run {} dataset with bit_len {} ===", dataset, bit_len);
@@ -306,6 +307,7 @@ fn run_protocol_with_ml_data() {
         &ctxt_x, 
         (&switch_key_x, &switch_key_y, &switch_key_h),
         (&switch_key_dcr_x, &switch_key_dcr_y, &switch_key_dcr_h),
+        &decomp,
         &grp
     );
     let end = start.elapsed();
@@ -380,20 +382,20 @@ fn run_protocol_with_ml_data() {
 
 }
 fn main() {
-    // let mut rng = RandState::new(); // Create a single RandState object
-    // let d = SystemTime::now()
-    // .duration_since(SystemTime::UNIX_EPOCH)
-    // .expect("Duration since UNIX_EPOCH failed");
-    // rng.seed(&Integer::from(d.as_secs()));
+    let mut rng = RandState::new(); // Create a single RandState object
+    let d = SystemTime::now()
+    .duration_since(SystemTime::UNIX_EPOCH)
+    .expect("Duration since UNIX_EPOCH failed");
+    rng.seed(&Integer::from(d.as_secs()));
     
-    // let dim_vec = vec![5,5,3];
-    // let n_try = 10;
-    // let mut outputs = Matrix::new(n_try, dim_vec[dim_vec.len()-1]);
-    // for i in 0..n_try {
-    //     println!("  ====================== i = {} ======================", i);
-    //     let row = run_protocol_start_to_end(&dim_vec, &mut rng);
-    //     outputs.set_row(i, &row);
-    // }
-    // println!("outputs = \n{}", outputs);
-    run_protocol_with_ml_data();
+    let dim_vec = vec![5,5,3];
+    let n_try = 10;
+    let mut outputs = Matrix::new(n_try, dim_vec[dim_vec.len()-1]);
+    for i in 0..n_try {
+        println!("  ====================== i = {} ======================", i);
+        let row = run_protocol_start_to_end(&dim_vec, &mut rng);
+        outputs.set_row(i, &row);
+    }
+    println!("outputs = \n{}", outputs);
+    // run_protocol_with_ml_data();
 }
