@@ -22,7 +22,7 @@ mod tests {
         let grp = Group::new(10); // Initialize the group        
         // println!("{}", grp);
         
-        let dim = 10;
+        let dim = 5;
         let b = dim * 2 + 1;
         let bound = 10;
         // Generate random inputs for sk and y
@@ -35,12 +35,14 @@ mod tests {
         }        
 
         // Perform setup
+        println!("start ipe_setup");
         let start = SystemTime::now();
         let sk = ipe_setup(&grp, dim, b, &mut rand);
         let end = start.elapsed();
         println!("Time elapsed in ipe_setup is: {:?}", end);
 
         // Perform key generation
+        println!("start ipe_keygen");
         let start = SystemTime::now();
         let sk_f = ipe_keygen(&sk, &y, &grp);
         let end = start.elapsed();
@@ -50,6 +52,7 @@ mod tests {
         // println!("sk_f: {:?}", sk_f);
 
         // Perform encryption
+        println!("start ipe_enc");
         let original = false;
         let mut ctxt: Vec<Integer> = Vec::new();
         let start = SystemTime::now();
@@ -75,6 +78,7 @@ mod tests {
         println!("Time elapsed in enc (mat_mult) is: {:?}", end);        
 
         // Perform decryption
+        println!("start ipe_dec");
         let start = SystemTime::now();
         let out = ipe_dec(&sk_f, &ctxt, &grp, true);
         let end = start.elapsed();

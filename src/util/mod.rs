@@ -2,6 +2,7 @@ pub mod group;
 pub mod vector;
 pub mod matrix;
 pub mod decomp;
+pub mod arguments;
 
 #[cfg(test)]
 mod tests {

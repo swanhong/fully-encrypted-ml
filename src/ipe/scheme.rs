@@ -56,9 +56,11 @@ pub fn ipe_enc(
     rng: &mut RandState<'_>,
 ) -> Vec<Integer> {
     let mod_val = grp.delta.clone();
-    let r = mod_val.clone().random_below(rng);
+    let r_pr = mod_val.clone().random_below(rng);
+    // r = 2 * N * r'
+    let r = &grp.n.clone() * Integer::from(2) * r_pr.clone();
 
-    let rand = gen_random_vector(sk.d_perp.cols, &mod_val, rng);
+    let rand: Vec<Integer> = gen_random_vector(sk.d_perp.cols, &mod_val, rng);
     let mut d_perp_rand = sk.d_perp.mul_vec(&rand);
     vec_mod(&mut d_perp_rand, &mod_val);
 
@@ -69,14 +71,14 @@ pub fn ipe_enc(
     };
     vec_mod(&mut x_mu, &mod_val);
 
-    let right = vec_mul_scalar(&sk.a, &r);
-    let mut right2 = sk.u.mul_vec(&sk.a);
-    right2 = vec_mul_scalar(&right2, &r);
-    right2 = vec_add(&right2, &x_mu);
+    let right_upper = vec_mul_scalar(&sk.a, &r);
+    let mut right_lower = sk.u.mul_vec(&sk.a);
+    right_lower = vec_mul_scalar(&right_lower, &r);
+    right_lower = vec_add(&right_lower, &x_mu);
 
     let mut right_joined = Vec::new();
-    right_joined.extend(right);
-    right_joined.extend(right2);
+    right_joined.extend(right_upper);
+    right_joined.extend(right_lower);
 
     let mut ctxt = sk.d_inv.mul_vec(&right_joined);
     ctxt = vec_add(&ctxt, &d_perp_rand);
@@ -87,14 +89,16 @@ pub fn ipe_enc(
 
 pub fn ipe_enc_matrix_expression(sk: &IpeSk, grp: &Group, mult_mu: bool, rand: &mut RandState<'_>) -> Matrix {
     let mod_val = grp.delta.clone();
-    let r = mod_val.clone().random_below(rand);
+    let r_pr = mod_val.clone().random_below(rand);
+    // r = 2 * N * r'
+    let r = &grp.n.clone() * Integer::from(2) * r_pr.clone();
 
     // enc(x) = sk_enc * mu * x + (D_perp * rvec + sk1 * r)
     // matrix = (sk_enc * mu || (D_perp * rvec + sk1 * r))
 
     // Compute D_perp_rand = D_null_space_basis * rvec
-    let rvec = gen_random_vector(sk.d_perp.cols, &mod_val, rand);
-    let d_perp_rand = sk.d_perp.clone() * rvec;
+    let rand_tilde = gen_random_vector(sk.d_perp.cols, &mod_val, rand);
+    let d_perp_rand = sk.d_perp.clone() * rand_tilde;
 
     // tmp = sk1 * r
     let tmp = vec_mul_scalar(&sk.sk1, &r);

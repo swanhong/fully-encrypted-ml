@@ -11,6 +11,7 @@ mod test;
 use rug::{Integer, Float};
 use rug::ops::Pow;
 use rug::rand::RandState;
+use util::arguments::Argument;
 use std::time::SystemTime;
 use crate::protocol::scheme::{protocol_setup, protocol_keygen_switch, protocol_enc_init, protocol_keyswitch, protocol_keygen_i, protocol_dec_i, protocol_keygen_end, protocol_dec_end};
 use crate::util::group::Group;
@@ -19,11 +20,15 @@ use crate::util::vector::{gen_random_vector, vec_mod};
 use crate::util::decomp::Decomp;
 use crate::protocol::algorithm::{sample_h, sample_gamma};
 use crate::parse::file_reader::read_matrix;
+use clap::Parser;
 
-fn run_protocol_start_to_end(dim_vec: &Vec<usize>, rng: &mut RandState) -> Vec<Integer> {
+fn run_protocol_start_to_end(
+    bit_len: u64,
+    dim_vec: &Vec<usize>, 
+    rng: &mut RandState) -> Vec<Integer> {
     println!("run test_ipe_start_to_end");
 
-    let grp = Group::new(100); // Initialize the group        
+    let grp = Group::new(bit_len); // Initialize the group        
     // println!("{}", grp);
     
     assert_eq!(dim_vec.len(), 3, "dim_vec must have length 3");
@@ -179,7 +184,10 @@ fn run_protocol_start_to_end(dim_vec: &Vec<usize>, rng: &mut RandState) -> Vec<I
     val_end
 }
 
-fn run_protocol_with_ml_data() {
+fn run_protocol_with_ml_data(
+    dataset: &str,
+    bit_len: u64,
+) {
     println!("run test_ipe_start_to_end");
 
     let mut rng = RandState::new(); // Create a single RandState object
@@ -188,18 +196,15 @@ fn run_protocol_with_ml_data() {
     .expect("Duration since UNIX_EPOCH failed");
     rng.seed(&Integer::from(d.as_secs()));
     
-    let bit_len = 100;
     let grp = Group::new(bit_len); // Initialize the group        
     // println!("{}", grp);
 
-    // let scale = 1048576; // 2^20
-    let scale = 100; // 2^20
+    let scale = 1073741824; // 2^30
     let sk_bound = Integer::from(10);
     let decomp = Decomp::new(2, &grp);
 
-    let dataset = "breast";
     println!("=== run {} dataset with bit_len {} ===", dataset, bit_len);
-    let file_x_test: String = format!("plain_model/{}/x_test.csv", dataset);
+    let file_x_test: String = format!("plain_model/{}/X_test.csv", dataset);
     let file_layer1_weight = format!("plain_model/{}/input_layer.weight.csv", dataset);
     let file_layer1_bias = format!("plain_model/{}/input_layer.bias.csv", dataset);
     let file_layer2_weight = format!("plain_model/{}/output_layer.weight.csv", dataset);
@@ -216,6 +221,7 @@ fn run_protocol_with_ml_data() {
     let scale_int_4 = scale_int.pow(4);
     layer2_bias.mul_scalar_inplace(&scale_int_4);
 
+    // we only test the first row of X_test data
     let mut x = x_test.get_row(0);
     x.push(Integer::from(1));
 
@@ -240,19 +246,6 @@ fn run_protocol_with_ml_data() {
     let dim2 = f1.rows;
     let dim3 = f2.rows;
     let k = 1; // fixed
-
-    // // let b = 1;
-    // let bound = 3;
-
-    // // x = dim1
-    // let x = gen_random_vector(dim, &Integer::from(bound), &mut rng);
-
-    // let f1 = Matrix::random_quadratic_tensored(dim, dim2, &Integer::from(bound), &grp.delta, &mut rng);
-    // let f2 = Matrix::random_quadratic_tensored(dim2, dim3, &Integer::from(bound), &grp.delta, &mut rng);
-
-    // println!("x = {:?}", x);
-    // println!("f1 = {:?}", f1);
-    // println!("f2 = {:?}", f2);
 
     // Perform setup
     println!("start protocol_setup");
@@ -375,27 +368,44 @@ fn run_protocol_with_ml_data() {
     println!("real mod n = {:?}", ffx);
 
     println!("eval result: {:?}", val_end);
-
-    // for val in val_end {
-    //     let _val_scaled = val / Float::with_val(53, scale).pow(Integer::from(10));
-    // }
-
 }
 fn main() {
+    let mut args = Argument::parse();
+    println!("{}", args);
+
     let mut rng = RandState::new(); // Create a single RandState object
     let d = SystemTime::now()
     .duration_since(SystemTime::UNIX_EPOCH)
     .expect("Duration since UNIX_EPOCH failed");
     rng.seed(&Integer::from(d.as_secs()));
-    
-    let dim_vec = vec![5,5,3];
-    let n_try = 10;
-    let mut outputs = Matrix::new(n_try, dim_vec[dim_vec.len()-1]);
-    for i in 0..n_try {
-        println!("  ====================== i = {} ======================", i);
-        let row = run_protocol_start_to_end(&dim_vec, &mut rng);
-        outputs.set_row(i, &row);
+    let bit_len = args.bit_len;
+
+    match args.target_algorithm.as_str() {
+        "protocol" => {
+            let dim0 = args.dim0;
+            let dim1 = args.dim1;
+            let dim2 = args.dim2;
+            let n_try = args.n_try;
+            let dim_vec = vec![dim0, dim1, dim2];
+            let mut outputs = Matrix::new(n_try, dim_vec[dim_vec.len()-1]);
+            for i in 0..n_try {
+                println!("  ====================== i = {} ======================", i);
+                let row = run_protocol_start_to_end(
+                    bit_len,
+                    &dim_vec, 
+                    &mut rng);
+                outputs.set_row(i, &row);
+            }
+            println!("outputs = \n{}", outputs);    
+        },
+        "ml" => {
+            run_protocol_with_ml_data(
+                args.data_ml.as_ref().unwrap().as_str(),
+                bit_len,
+            );
+        },
+        _ => {
+            println!("invalid target");
+        }
     }
-    println!("outputs = \n{}", outputs);
-    // run_protocol_with_ml_data();
 }
