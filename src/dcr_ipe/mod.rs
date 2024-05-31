@@ -18,6 +18,7 @@ mod test {
     println!("bit_len: {}", bit_len);
     println!("dim: {}", dim);
     println!("bound: {}", bound);
+    println!(" !!! WARNING: this bound is not secure for real use case !!!");
 
     let grp = Group::new(bit_len);
     println!("grp: {}", grp);

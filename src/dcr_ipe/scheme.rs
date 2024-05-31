@@ -18,10 +18,12 @@ pub fn dcr_setup(
     rng: &mut RandState<'_>,
 ) -> (Vec<Integer>, Vec<Integer>) {
     let mut sk = vec![Integer::from(0); dim];
+    let mut bound2 = sk_bound.clone();
+    bound2.mul_assign(2);
     for i in 0..dim {
-        sk[i] = sk_bound.clone().random_below(rng);
+        sk[i] = bound2.clone().random_below(rng);
+        sk[i] -= sk_bound;
     }
-
     let pk = vec_exp_with_base(&grp.g, &sk, &grp.n_sq);
 
     (sk, pk)

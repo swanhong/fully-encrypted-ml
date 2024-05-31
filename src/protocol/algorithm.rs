@@ -339,3 +339,15 @@ pub fn sample_gamma(
 
     (gamma_1, gamma_pr_1)
 }
+
+use rug::ops::Pow;
+use crate::util::group::Group;
+pub fn get_sk_bound(
+    dim: usize,
+    bound: usize,
+    lambda: usize,
+    grp: &Group,
+) -> Integer {
+    // sk_bound >= 2^{lambda + dim + 1} * (b + dim*(sqrt(dim)*b)^dim)^{dim-1} * dim * N^2
+    Integer::from(2).pow(lambda as u32 + dim as u32 + 1) * Integer::from(bound + dim*(dim as f64).sqrt() as usize * bound).pow(dim as u32 - 1) * Integer::from(dim) * grp.n_sq.clone()
+}

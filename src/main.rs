@@ -8,6 +8,7 @@ mod qe;
 mod protocol;
 mod test;
 
+use protocol::algorithm::get_sk_bound;
 use rug::{Integer, Float};
 use rug::ops::Pow;
 use rug::rand::RandState;
@@ -25,7 +26,9 @@ use clap::Parser;
 fn run_protocol_start_to_end(
     bit_len: u64,
     dim_vec: &Vec<usize>, 
-    rng: &mut RandState) -> Vec<Integer> {
+    bound: usize,
+    rng: &mut RandState
+) -> Vec<Integer> {
     println!("run test_ipe_start_to_end");
 
     let grp = Group::new(bit_len); // Initialize the group        
@@ -36,10 +39,11 @@ fn run_protocol_start_to_end(
     let dim2 = dim_vec[1];
     let dim3 = dim_vec[2];
     let k = 1;
-
-    // let b = 1;
-    let bound = 5;
-    let sk_bound = Integer::from(10);
+    
+    let sk_bound= get_sk_bound(dim, bound, 128, &grp);
+    println!("b = {}", bound);
+    println!("sk_bound = {}", sk_bound);
+    
 
     let decomp = Decomp::new(3, &grp);
 
@@ -200,7 +204,6 @@ fn run_protocol_with_ml_data(
     // println!("{}", grp);
 
     let scale = 1073741824; // 2^30
-    let sk_bound = Integer::from(10);
     let decomp = Decomp::new(2, &grp);
 
     println!("=== run {} dataset with bit_len {} ===", dataset, bit_len);
@@ -236,9 +239,7 @@ fn run_protocol_with_ml_data(
 
     println!("x = {:?}", x);
     println!("f1_notensor = {}", f1_notensor);
-    // println!("f1 = {:?}", f1);
     println!("f2_notensor = {}", f2_notensor);
-    // println!("f2 = {:?}", f2);
 
     assert_eq!(x.len() * x.len(), f1.cols, "dim1 is not matched between x and f1"); // dim
     assert_eq!(f1.rows * f1.rows(), f2.cols, "dim2 is not matched between f1 and f2"); // dim2
@@ -246,6 +247,8 @@ fn run_protocol_with_ml_data(
     let dim2 = f1.rows;
     let dim3 = f2.rows;
     let k = 1; // fixed
+
+    let sk_bound = get_sk_bound(dim, 10 * scale as usize, 128, &grp);
 
     // Perform setup
     println!("start protocol_setup");
@@ -386,6 +389,7 @@ fn main() {
             let dim1 = args.dim1;
             let dim2 = args.dim2;
             let n_try = args.n_try;
+            let bound = args.bound;
             let dim_vec = vec![dim0, dim1, dim2];
             let mut outputs = Matrix::new(n_try, dim_vec[dim_vec.len()-1]);
             for i in 0..n_try {
@@ -393,6 +397,7 @@ fn main() {
                 let row = run_protocol_start_to_end(
                     bit_len,
                     &dim_vec, 
+                    bound,
                     &mut rng);
                 outputs.set_row(i, &row);
             }

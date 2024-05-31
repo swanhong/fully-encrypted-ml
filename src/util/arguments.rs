@@ -28,6 +28,11 @@ pub struct Argument {
     /// (default = 3)
     #[arg(long, default_value_t = 3)]
     pub dim2: usize,
+
+    /// message & function bound
+    /// (default = 10)
+    #[arg(long, default_value_t = 10)]
+    pub bound: usize,
     
     /// number of trys to check runtime and correctness of the protocol
     #[arg(short, long, default_value_t = 1)]
@@ -48,6 +53,7 @@ impl Argument {
             dim2: 3,
             n_try: 1,
             data_ml: Some("breast".to_string()),
+            bound: 10,
             bit_len: 100,
         }
     }
@@ -63,6 +69,7 @@ impl fmt::Display for Argument {
              dim0               : {}\n\
              dim1               : {}\n\
              dim2               : {}\n\
+             bound              : {}\n\
              n_try              : {}\n\
              data_ml            : {:?}\n\
             =========================",
@@ -71,6 +78,7 @@ impl fmt::Display for Argument {
             self.dim0,
             self.dim1,
             self.dim2,
+            self.bound,
             self.n_try,
             self.data_ml.as_ref().map(|s| s.clone()).unwrap_or_default(),
         )
