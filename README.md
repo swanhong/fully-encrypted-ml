@@ -4,18 +4,46 @@
 
 ## Overview
 
-This repository is the implementation of scheme suggested in the paper "Fully Encrypted Machine Learning Protocol using Functional Encryption", which in currently under review.
+This repository contains the `Rust` implementation of the scheme suggested in the paper "Fully Encrypted Machine Learning Protocol using Functional Encryption," which is currently under review.
 
 ## Build
-Our code is written in rust, so only dependent to rust.
-After installing rust, run following command.
+Our code is written in Rust, so it only depends on Rust. After installing Rust, run the following command:
 ```bash
+    # cd ~
     cargo build
 ```
 
-## Sample Run
+## Run
 
-running with default command outputs 
+### Test
+To test the code, run following command:
 ```bash
-    cargo run
+    ./target/debug/fe -t protocol
 ```
+This runs a 2-level composable FE evaluation. The default dimensions are [5, 4, 3], which means that it chooses a random vector of dimension 5, evaluates a random quadratic polynomial (with constant term) to output a dimension 4 vector, and then evaluates another random quadratic polynomial to finally output a dimension 3 vector. The bit length of primes for the DCR group is set to 100, so the code shows fast (but not secure) results.
+
+### Run Protocol
+
+The target option `protocol` runs the protocol with a random message and evaluates the composition of two quadratic functions.
+```bash
+    ./target/debug/fe --t protocol --bit-len 3072 --dim0 5 --dim1 4 --dim2 3 --bound 10
+```
+The arguments are as follows:
+	- `--t`: Specifies the target option. In this case, it's protocol.
+	- `--bit-len`: The bit length of primes used for the DCR group. To ensure 128-bit security, this parameter should be chosen as 3072. Option: (10, 100, 3072)
+	- `--dim0`: The dimension of the initial random vector.
+	- `--dim1`: The dimension of the intermediate vector after the first quadratic polynomial evaluation.
+	- `--dim2`: The dimension of the final vector after the second quadratic polynomial evaluation.
+	- `--bound`: The bound for the elements in random message & coefficients of functions.
+
+### Run ML with UCI datasets
+
+Here, we exploit `Iris` or `breast` dataset from UCI to test evaluation of 2-layer neural network with square activation function using our composable FE. Here, the model is already trained in `plain_model/{DATA_NAME}` folder. Refer each `*.ipynb` files for the details.
+
+In each `plain_model/{DATA_NAME}` folder, the test data is stored in `X_test.csv` file and the information of each layer are contained in `{input/output}_layer.{bias/weight}.csv` file, respectively.
+
+Then, to test evaluation of model using "first" sample in test file, run following command:
+```bash
+	./target/debug/fe -t ml --bit-len 3072 -d {DATA_NAME}
+```
+Put `iris` or `breast` on `{DATA_NAME}`. 

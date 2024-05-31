@@ -41,10 +41,7 @@ fn run_protocol_start_to_end(
     let k = 1;
     
     let sk_bound= get_sk_bound(dim, bound, 128, &grp);
-    println!("b = {}", bound);
-    println!("sk_bound = {}", sk_bound);
     
-
     let decomp = Decomp::new(3, &grp);
 
     let x = gen_random_vector(dim, &Integer::from(bound), rng);
@@ -249,7 +246,8 @@ fn run_protocol_with_ml_data(
     let k = 1; // fixed
 
     let sk_bound = get_sk_bound(dim, 10 * scale as usize, 128, &grp);
-
+    println!("sk_bound = {}", sk_bound);
+    
     // Perform setup
     println!("start protocol_setup");
     let start = SystemTime::now();
