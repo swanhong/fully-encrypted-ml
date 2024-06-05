@@ -255,7 +255,7 @@ pub fn matrix_inverse(
     }
 }
 
-pub fn sample_h(dim: usize, k: usize, modulo: &Integer, rng: &mut RandState<'_>) -> (Matrix, Matrix) {
+pub fn sample_h(dim: usize, k: usize, t: Integer, modulo: &Integer, rng: &mut RandState<'_>) -> (Matrix, Matrix) {
     // sample two matrices h_left_1 and h_right_1
     
     // h_left is dim * (dim + k ) ternary matrix
@@ -268,27 +268,50 @@ pub fn sample_h(dim: usize, k: usize, modulo: &Integer, rng: &mut RandState<'_>)
     let mut h_0: Matrix = Matrix::new(dim, dim + k);
     let mut h_t: Matrix = Matrix::new(dim + k, dim);
     let mut h_0_inv: Matrix = Matrix::new(dim, dim);
-    while true {
-        h_0 = Matrix::random(dim, dim + k, &Integer::from(3), rng);
-        h_0.add_int_inplace(&Integer::from(-1));
-        h_0.mod_inplace(modulo);
+    let mut h_pr_0: Matrix = Matrix::new(dim + k, dim);
 
-        h_t = h_0.transpose();
-        let mut tmp = h_0.clone() * h_t.clone();
-        tmp.mod_inplace(modulo);
-        match matrix_inverse(&mut tmp, modulo) {
-            Ok(m_inv) => {
-                h_0_inv = m_inv.clone();
-                break;
+    loop {
+        loop {
+            // sample h_0 from {-1, 0, 1}^{dim * (dim+k)}
+            h_0 = Matrix::random(dim, dim + k, &Integer::from(3), rng);
+            h_0.add_int_inplace(&Integer::from(-1));
+            // h_0.mod_inplace(modulo);
+    
+            h_t = h_0.transpose();
+            let mut tmp = h_0.clone() * h_t.clone();
+            tmp.mod_inplace(modulo);
+            match matrix_inverse(&mut tmp, modulo) {
+                Ok(m_inv) => {
+                    h_0_inv = m_inv.clone();
+                    break;
+                }
+                Err(rank) => {
+                    continue;
+                }
             }
-            Err(rank) => {
-                continue;
+    
+        }
+        
+        h_pr_0 = h_t * h_0_inv;
+        let mut is_h_pr_0_in_hyperball = true;
+        for i in 0..dim {
+            let col_i = h_pr_0.get_col(i);
+            // compute norm of col_i
+            let mut norm = Integer::from(0);
+            for j in 0..dim + k {
+                norm += col_i[j].clone().pow(2);
+            }
+            norm = norm.sqrt();
+            if norm > t {
+                is_h_pr_0_in_hyperball = false;
             }
         }
 
+        if is_h_pr_0_in_hyperball {
+            break;
+        }
     }
     
-    let h_pr_0 = h_t * h_0_inv;
 
     let h = concatenate_diag_one(&h_0);
     let h_pr = concatenate_diag_one(&h_pr_0);
@@ -350,4 +373,13 @@ pub fn get_sk_bound(
 ) -> Integer {
     // sk_bound >= 2^{lambda + dim + 1} * (b + dim*(sqrt(dim)*b)^dim)^{dim-1} * dim * N^2
     Integer::from(2).pow(lambda as u32 + dim as u32 + 1) * Integer::from(bound + dim*(dim as f64).sqrt() as usize * bound).pow(dim as u32 - 1) * Integer::from(dim) * grp.n_sq.clone()
+}
+
+pub fn get_smallest_t(
+    dim: usize,
+    k: usize,
+    lambda: usize,
+) -> Integer {
+    // t >= sqrt(dim * (dim + k)) * 2^{(lambda / dim^2)}
+    Integer::from((dim * (dim + k)) as u32 + 1).sqrt() * Integer::from(2).pow((lambda / (dim * dim)) as u32 + 1)
 }
