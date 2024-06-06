@@ -82,8 +82,8 @@ fn run_protocol_start_to_end(
     let (h1_left, h1_right) = sample_h(dim2, k, t2, &grp.delta, rng);
 
     let (gamma_left, gamma_right) = sample_gamma(dim, dim, &grp.delta, rng);
-    let end = start.elapsed();
-    println!("Time elapsed in protocol_setup is: {:?}", end);
+    let time_setup = start.elapsed();
+    println!("Time elapsed in protocol_setup is: {:?}", time_setup);
 
     println!("start protocol_keygen_switch");
     let start = SystemTime::now();
@@ -100,14 +100,14 @@ fn run_protocol_start_to_end(
         &decomp, 
         &grp, 
         rng);
-    let end = start.elapsed();
-    println!("Time elapsed in protocol_keygen_switch is: {:?}", end);
+    let time_keygen_switch = start.elapsed();
+    println!("Time elapsed in protocol_keygen_switch is: {:?}", time_keygen_switch);
 
     println!("start protocol_enc_init");
     let start = SystemTime::now();
     let ctxt_x = protocol_enc_init(&dcr_pk, &gamma_right, &x, &grp, rng);
-    let end = start.elapsed();
-    println!("Time elapsed in protocol_enc_init is: {:?}", end);
+    let time_enc = start.elapsed();
+    println!("Time elapsed in protocol_enc_init is: {:?}", time_enc);
     
     println!("start protocol_keyswitch");
     let start = SystemTime::now();
@@ -119,8 +119,8 @@ fn run_protocol_start_to_end(
         &decomp,
         &grp
     );
-    let end = start.elapsed();
-    println!("Time elapsed in protocol_keyswitch is: {:?}", end);
+    let time_protocol_keyswitch = start.elapsed();
+    println!("Time elapsed in protocol_keyswitch is: {:?}", time_protocol_keyswitch);
 
     println!("start protocol_keygen_i");
     let start = SystemTime::now();
@@ -138,8 +138,8 @@ fn run_protocol_start_to_end(
             &decomp, 
             &grp, 
             rng);
-    let end = start.elapsed();
-    println!("Time elapsed in protocol_keygen_i is: {:?}", end);
+    let time_protocol_keygen_i = start.elapsed();
+    println!("Time elapsed in protocol_keygen_i is: {:?}", time_protocol_keygen_i);
 
     println!("start protocol_dec_i");
     let start = SystemTime::now();
@@ -151,14 +151,14 @@ fn run_protocol_start_to_end(
         &decomp,
         &grp
     );
-    let end = start.elapsed();
-    println!("Time elapsed in protocol_dec_i is: {:?}", end);
+    let time_protocol_dec_i = start.elapsed();
+    println!("Time elapsed in protocol_dec_i is: {:?}", time_protocol_dec_i);
 
     println!("start protocol_keygen_end");
     let start = SystemTime::now();
     let (sk_f_mat, sk_f_red) = protocol_keygen_end(&qe_sk_vec[0], &h1_left, &f2, &decomp, &grp);
-    let end = start.elapsed();
-    println!("Time elapsed in protocol_keygen_end is: {:?}", end);
+    let time_protocol_keygen_end = start.elapsed();
+    println!("Time elapsed in protocol_keygen_end is: {:?}", time_protocol_keygen_end);
 
     println!("start protocol_dec_end");
     let start = SystemTime::now();
@@ -168,8 +168,8 @@ fn run_protocol_start_to_end(
         &decomp,
         &grp
     );
-    let end = start.elapsed();
-    println!("Time elapsed in protocol_dec_end is: {:?}", end);
+    let time_protocol_dec_end = start.elapsed();
+    println!("Time elapsed in protocol_dec_end is: {:?}", time_protocol_dec_end);
 
     println!("reprint inputs");
     println!("x: {:?}", x);
@@ -184,9 +184,24 @@ fn run_protocol_start_to_end(
     for i in 0..val_end.len() {
         assert_eq!(val_end[i], ffx[i], "dec_end is not matched with eval result in th element");
     }
+
+    println!(" === Time summaries ===");
+    println!("protocol_setup: {:?}", time_setup);
+    println!("protocol_keygen_switch: {:?}", time_keygen_switch);
+    println!("protocol_enc_init: {:?}", time_enc);
+    println!("protocol_keyswitch: {:?}", time_protocol_keyswitch);
+    println!("protocol_keygen_i: {:?}", time_protocol_keygen_i);
+    println!("protocol_dec_i: {:?}", time_protocol_dec_i);
+    println!("protocol_keygen_end: {:?}", time_protocol_keygen_end);
+    println!("protocol_dec_end: {:?}", time_protocol_dec_end);
+    println!("");
+    println!("SETUP: {:?}", time_setup.unwrap());
+    println!("KEYGEN: {:?}", time_keygen_switch.unwrap() + time_protocol_keygen_i.unwrap() + time_protocol_keygen_end.unwrap());
+    println!("ENC: {:?}", time_enc.unwrap());
+    println!("DEC: {:?}", time_protocol_keyswitch.unwrap() + time_protocol_dec_i.unwrap() + time_protocol_dec_end.unwrap());
+
     val_end
 }
-
 fn run_protocol_with_ml_data(
     dataset: &str,
     bit_len: u64,
@@ -195,13 +210,11 @@ fn run_protocol_with_ml_data(
 
     let mut rng = RandState::new(); // Create a single RandState object
     let d = SystemTime::now()
-    .duration_since(SystemTime::UNIX_EPOCH)
-    .expect("Duration since UNIX_EPOCH failed");
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .expect("Duration since UNIX_EPOCH failed");
     rng.seed(&Integer::from(d.as_secs()));
-    
-    let grp = Group::new(bit_len); // Initialize the group        
-    // println!("{}", grp);
 
+    let grp = Group::new(bit_len); // Initialize the group        
     let scale = 1073741824; // 2^30
     let decomp = Decomp::new(2, &grp);
 
@@ -249,85 +262,83 @@ fn run_protocol_with_ml_data(
     let t1 = get_smallest_t(dim, k, 128);
     let t2 = get_smallest_t(dim2, k, 128);
     let sk_bound = get_sk_bound(dim, 10 * scale as usize, 128, &grp);
-    println!("sk_bound = {}", sk_bound);
-    
+
     // Perform setup
     println!("start protocol_setup");
     let start = SystemTime::now();
-    let ((dcr_sk, dcr_pk), 
-        qe_sk_init, 
+    let ((dcr_sk, dcr_pk),
+        qe_sk_init,
         qe_sk_vec,
         _qe_sk_end,
     ) = protocol_setup(
-        vec![dim, dim2, dim3], 
-        0, 
-        k, 
-        &sk_bound, 
-        &grp, 
+        vec![dim, dim2, dim3],
+        0,
+        k,
+        &sk_bound,
+        &grp,
         &mut rng);
-
+        
     let (h0_left, h0_right) = sample_h(dim, k, t1, &grp.delta, &mut rng);
     let (h1_left, h1_right) = sample_h(dim2, k, t2, &grp.delta, &mut rng);
     let (gamma_left, gamma_right) = sample_gamma(dim, dim, &grp.delta, &mut rng);
-    let end = start.elapsed();
-    println!("Time elapsed in protocol_setup is: {:?}", end);
-    
+    let time_setup = start.elapsed();
+    println!("Time elapsed in protocol_setup is: {:?}", time_setup);
+
     println!("start protocol_keygen_switch");
     let start = SystemTime::now();
     let (
         (switch_key_x, switch_key_y, switch_key_h),
         (switch_key_dcr_x, switch_key_dcr_y, switch_key_dcr_h),
-    )
-    = protocol_keygen_switch(
+    ) = protocol_keygen_switch(
         &qe_sk_init,
-        &dcr_sk, 
-        &h0_right, 
-        &gamma_left, 
-        dim, 
-        k, 
-        &decomp, 
-        &grp, 
+        &dcr_sk,
+        &h0_right,
+        &gamma_left,
+        dim,
+        k,
+        &decomp,
+        &grp,
         &mut rng);
-    let end = start.elapsed();
-    println!("Time elapsed in protocol_keygen_switch is: {:?}", end);
+    let time_keygen_switch = start.elapsed();
+    println!("Time elapsed in protocol_keygen_switch is: {:?}", time_keygen_switch);
 
     println!("start protocol_enc_init");
     let start = SystemTime::now();
     let ctxt_x = protocol_enc_init(&dcr_pk, &gamma_right, &x, &grp, &mut rng);
-    let end = start.elapsed();
-    println!("Time elapsed in protocol_enc_init is: {:?}", end);
+    let time_enc = start.elapsed();
+    println!("Time elapsed in protocol_enc_init is: {:?}", time_enc);
 
     println!("start protocol_keyswitch");
     let start = SystemTime::now();
     //  run keyswitch
     let (ct_out_x, ct_out_y, ct_out_h) = protocol_keyswitch(
-        &ctxt_x, 
+        &ctxt_x,
         (&switch_key_x, &switch_key_y, &switch_key_h),
         (&switch_key_dcr_x, &switch_key_dcr_y, &switch_key_dcr_h),
         &decomp,
         &grp
     );
-    let end = start.elapsed();
-    println!("Time elapsed in protocol_keyswitch is: {:?}", end);
+    let time_protocol_keyswitch = start.elapsed();
+    println!("Time elapsed in protocol_keyswitch is: {:?}", time_protocol_keyswitch);
 
     println!("start protocol_keygen_i");
     let start = SystemTime::now();
-    let ((qe_b_x, qe_b_y, qe_b_h), 
-         (sk_f_mat_x, sk_f_mat_y, sk_f_mat_h), 
+    let ((qe_b_x, qe_b_y, qe_b_h),
+         (sk_f_mat_x, sk_f_mat_y, sk_f_mat_h),
          (sk_red_mat_x, sk_red_mat_y, sk_red_mat_h),
-        ) = protocol_keygen_i(
-            &qe_sk_vec[0], 
-            &qe_sk_init, 
-            &h1_right, 
-            &h0_left, 
-            dim2, 
-            k, 
-            &f1, 
-            &decomp, 
-            &grp, 
-            &mut rng);
-    let end = start.elapsed();
-    println!("Time elapsed in protocol_keygen_i is: {:?}", end);
+    ) = protocol_keygen_i(
+        &qe_sk_vec[0],
+        &qe_sk_init,
+        &h1_right,
+        &h0_left,
+        dim2,
+        k,
+        &f1,
+        &decomp,
+        &grp,
+        &mut rng);
+    let time_protocol_keygen_i = start.elapsed();
+    println!("Time elapsed in protocol_keygen_i is: {:?}", time_protocol_keygen_i);
 
     println!("start protocol_dec_i");
     let start = SystemTime::now();
@@ -339,14 +350,14 @@ fn run_protocol_with_ml_data(
         &decomp,
         &grp
     );
-    let end = start.elapsed();
-    println!("Time elapsed in protocol_dec_i is: {:?}", end);
+    let time_protocol_dec_i = start.elapsed();
+    println!("Time elapsed in protocol_dec_i is: {:?}", time_protocol_dec_i);
 
     println!("start protocol_keygen_end");
     let start = SystemTime::now();
     let (sk_f_mat, sk_f_red) = protocol_keygen_end(&qe_sk_vec[0], &h1_left, &f2, &decomp, &grp);
-    let end = start.elapsed();
-    println!("Time elapsed in protocol_keygen_end is: {:?}", end);
+    let time_protocol_keygen_end = start.elapsed();
+    println!("Time elapsed in protocol_keygen_end is: {:?}", time_protocol_keygen_end);
 
     println!("start protocol_dec_end");
     let start = SystemTime::now();
@@ -356,8 +367,8 @@ fn run_protocol_with_ml_data(
         &decomp,
         &grp
     );
-    let end = start.elapsed();
-    println!("Time elapsed in protocol_dec_end is: {:?}", end);
+    let time_protocol_dec_end = start.elapsed();
+    println!("Time elapsed in protocol_dec_end is: {:?}", time_protocol_dec_end);
 
     println!("reprint inputs");
     println!("x: {:?}", x);
@@ -365,14 +376,28 @@ fn run_protocol_with_ml_data(
     println!("f2: {:?}", f2);
     let fx = eval_quadratic_multivariate(&x, &x, &f1);
     println!("f1(x) = {:?}", fx);
-
     let mut ffx = eval_quadratic_multivariate(&fx, &fx, &f2);
     println!("f2(f1(x)) = {:?}", ffx);
     vec_mod(&mut ffx, &grp.n);
     println!("real mod n = {:?}", ffx);
-
     println!("eval result: {:?}", val_end);
+
+    println!(" === Time summaries ===");
+    println!("protocol_setup: {:?}", time_setup);
+    println!("protocol_keygen_switch: {:?}", time_keygen_switch);
+    println!("protocol_enc_init: {:?}", time_enc);
+    println!("protocol_keyswitch: {:?}", time_protocol_keyswitch);
+    println!("protocol_keygen_i: {:?}", time_protocol_keygen_i);
+    println!("protocol_dec_i: {:?}", time_protocol_dec_i);
+    println!("protocol_keygen_end: {:?}", time_protocol_keygen_end);
+    println!("protocol_dec_end: {:?}", time_protocol_dec_end);
+    println!("");
+    println!("SETUP: {:?}", time_setup.unwrap());
+    println!("KEYGEN: {:?}", time_keygen_switch.unwrap() + time_protocol_keygen_i.unwrap() + time_protocol_keygen_end.unwrap());
+    println!("ENC: {:?}", time_enc.unwrap());
+    println!("DEC: {:?}", time_protocol_keyswitch.unwrap() + time_protocol_dec_i.unwrap() + time_protocol_dec_end.unwrap());
 }
+
 fn main() {
     let mut args = Argument::parse();
     println!("{}", args);
