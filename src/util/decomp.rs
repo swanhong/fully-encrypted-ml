@@ -30,7 +30,6 @@ impl Decomp {
     // decompose 
     pub fn int(&self, a: &Integer) -> Vec<Integer> {
         // assert!(a < &self.modulo, "a = {}, self.modulo = {}", a, self.modulo);
-        // println!("input : {}", a);
         let mut res: Vec<Integer> = vec![Integer::from(0); self.dim];
         let mut b = a.clone();
         for index in 0..self.dim {
@@ -43,7 +42,6 @@ impl Decomp {
             res[index] = rem;
             b = quo.clone();
         }
-        // println!("output: {:?}", res);
         assert_eq!(res.len(), self.dim, "res.len() = {}, self.dim = {}", res.len(), self.dim);
         res
     }

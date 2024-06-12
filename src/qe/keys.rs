@@ -25,18 +25,7 @@ impl QeSk {
         
         let v = Matrix::random(n_x, 2, &modulo, rng);
         let w = Matrix::random(n_y, 2, &modulo, rng);
-        // let mut v = Matrix::new(n_x, 2);
-        // v.set(0, 0, Integer::from_str_radix("371014437298", 10).unwrap());
-        // v.set(0, 1, Integer::from_str_radix("707184294009", 10).unwrap());
-
-        // // w = [ 508440625824  873737396821 ]
-        // let mut w = Matrix::new(n_y, 2);
-        // w.set(0, 0, Integer::from_str_radix("115749828351", 10).unwrap());
-        // w.set(0, 1, Integer::from_str_radix("304040654084", 10).unwrap());
-
-        
-
-        
+              
         let i_n_x = Matrix::get_identity(n_x);
         let i_n_y = Matrix::get_identity(n_y);
 

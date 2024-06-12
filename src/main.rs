@@ -27,6 +27,7 @@ fn run_protocol_start_to_end(
     bit_len: u64,
     dim_vec: &Vec<usize>, 
     bound: usize,
+    n_decomp: usize,
     rng: &mut RandState
 ) -> Vec<Integer> {
     println!("run test_ipe_start_to_end");
@@ -44,7 +45,7 @@ fn run_protocol_start_to_end(
     
     let sk_bound= get_sk_bound(dim, bound, 128, &grp);
     
-    let decomp = Decomp::new(3, &grp);
+    let decomp = Decomp::new(n_decomp, &grp);
 
     let x = gen_random_vector(dim, &Integer::from(bound), rng);
     let f1 = Matrix::random_quadratic_tensored(dim, dim2, &Integer::from(bound), &grp.delta, rng);
@@ -77,7 +78,7 @@ fn run_protocol_start_to_end(
         &sk_bound, 
         &grp, 
         rng);
-
+    
     let (h0_left, h0_right) = sample_h(dim, k, t1, &grp.delta, rng);
     let (h1_left, h1_right) = sample_h(dim2, k, t2, &grp.delta, rng);
 
@@ -205,6 +206,8 @@ fn run_protocol_start_to_end(
 fn run_protocol_with_ml_data(
     dataset: &str,
     bit_len: u64,
+    scale: i64,
+    n_decomp: usize,
 ) {
     println!("run test_ipe_start_to_end");
 
@@ -215,8 +218,7 @@ fn run_protocol_with_ml_data(
     rng.seed(&Integer::from(d.as_secs()));
 
     let grp = Group::new(bit_len); // Initialize the group        
-    let scale = 1073741824; // 2^30
-    let decomp = Decomp::new(2, &grp);
+    let decomp = Decomp::new(n_decomp, &grp);
 
     println!("=== run {} dataset with bit_len {} ===", dataset, bit_len);
     let file_x_test: String = format!("plain_model/{}/X_test.csv", dataset);
@@ -232,9 +234,11 @@ fn run_protocol_with_ml_data(
     let mut layer2_bias = read_matrix(&file_layer2_bias, scale);
 
     let scale_int = Integer::from(scale);
-    layer1_bias.mul_scalar_inplace(&scale_int);
-    let scale_int_4 = scale_int.pow(4);
-    layer2_bias.mul_scalar_inplace(&scale_int_4);
+    let scale_int_pow_1 = scale_int.clone().pow(1);
+    let scale_int_pow_4 = scale_int.clone().pow(4);
+    let scale_int_pow_10 = scale_int.clone().pow(10);
+    layer1_bias.mul_scalar_inplace(&scale_int_pow_1); // scale * scale^1
+    layer2_bias.mul_scalar_inplace(&scale_int_pow_4); // scale * scale^4
 
     // we only test the first row of X_test data
     let mut x = x_test.get_row(0);
@@ -249,6 +253,7 @@ fn run_protocol_with_ml_data(
     let f2_notensor = concatenate_col(&layer2_weight, &layer2_bias);
     let f2 = f2_notensor.gen_tensored_matrix(&grp.delta);
 
+    println!("scale = {}", scale);
     println!("x = {:?}", x);
     println!("f1_notensor = {}", f1_notensor);
     println!("f2_notensor = {}", f2_notensor);
@@ -277,7 +282,8 @@ fn run_protocol_with_ml_data(
         &sk_bound,
         &grp,
         &mut rng);
-        
+    println!("protocol setup done?");
+    
     let (h0_left, h0_right) = sample_h(dim, k, t1, &grp.delta, &mut rng);
     let (h1_left, h1_right) = sample_h(dim2, k, t2, &grp.delta, &mut rng);
     let (gamma_left, gamma_right) = sample_gamma(dim, dim, &grp.delta, &mut rng);
@@ -369,6 +375,8 @@ fn run_protocol_with_ml_data(
     );
     let time_protocol_dec_end = start.elapsed();
     println!("Time elapsed in protocol_dec_end is: {:?}", time_protocol_dec_end);
+    
+    let val_scaled = val_end.iter().map(|x| x.clone() / scale_int_pow_10.clone()).collect::<Vec<Integer>>();
 
     println!("reprint inputs");
     println!("x: {:?}", x);
@@ -381,6 +389,7 @@ fn run_protocol_with_ml_data(
     vec_mod(&mut ffx, &grp.n);
     println!("real mod n = {:?}", ffx);
     println!("eval result: {:?}", val_end);
+    println!("scaled result: {:?}", val_scaled);
 
     println!(" === Time summaries ===");
     println!("protocol_setup: {:?}", time_setup);
@@ -399,7 +408,7 @@ fn run_protocol_with_ml_data(
 }
 
 fn main() {
-    let mut args = Argument::parse();
+    let args = Argument::parse();
     println!("{}", args);
 
     let mut rng = RandState::new(); // Create a single RandState object
@@ -408,6 +417,8 @@ fn main() {
     .expect("Duration since UNIX_EPOCH failed");
     rng.seed(&Integer::from(d.as_secs()));
     let bit_len = args.bit_len;
+    let scale = args.scale;
+    let n_decomp = args.n_decomp;
 
     match args.target_algorithm.as_str() {
         "protocol" => {
@@ -424,6 +435,7 @@ fn main() {
                     bit_len,
                     &dim_vec, 
                     bound,
+                    n_decomp,
                     &mut rng);
                 outputs.set_row(i, &row);
             }
@@ -433,6 +445,8 @@ fn main() {
             run_protocol_with_ml_data(
                 args.data_ml.as_ref().unwrap().as_str(),
                 bit_len,
+                scale,
+                n_decomp,
             );
         },
         _ => {

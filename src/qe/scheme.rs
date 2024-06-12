@@ -211,10 +211,6 @@ fn compute_m_h_b_1(
     // Compute M_h_lr
     let m_h_lr = Matrix::tensor_product_vec_right(&i_n_x, &r_y, &modulo);
 
-    // println!("i_n_x = {}", i_n_x);
-    // println!("r_y = {:?}", r_y);
-    // println!("m_h_lr = {}", m_h_lr);
-
     // Concatenate M_h_ul and M_h_ur
     let m_h_u = concatenate_col(&m_h_ul, &m_h_ur);
 
@@ -223,8 +219,7 @@ fn compute_m_h_b_1(
 
     // Concatenate M_h_u and M_h_l
     let m_h = concatenate_row(&m_h_u, &m_h_l);
-    // println!("m_h_l = {}", m_h_l);
-    // println!("m_h = {}", m_h);
+
     // Create rx_ry vector and compute V_rx_ry
     let rx_ry = tensor_product_vecs(r_x, r_y, &modulo);
 
@@ -246,10 +241,6 @@ fn compute_m_h_b_1(
     // Concatenate M_h and h_b to create M_h_b
     let m_h_b = concatenate_vec_col(&m_h, &h_b);
 
-    // println!("m_h = {}", m_h);
-    // println!("h_b = {:?}", h_b);
-    // println!("m_h_b = {}", m_h_b);
-
     // Create M_h_b_1 as a diagonal matrix with M_h_b & 1
     let mut m_h_b_1 = Matrix::new(m_h_b.rows + 1, m_h_b.cols + 1);
     m_h_b_1.set(m_h_b.rows, m_h_b.cols, Integer::from(1));
@@ -259,7 +250,6 @@ fn compute_m_h_b_1(
             m_h_b_1.set(i, j, m_h_b.get(i, j));
         }
     }
-    // println!("m_h_b_1 = {}", m_h_b_1);
     m_h_b_1
 }
 
@@ -293,16 +283,9 @@ pub fn qe_enc_matrix_expression(
         true,
     );
 
-    // println!("enc_x size = {} x {}", enc_x.rows, enc_x.cols);
-    // println!("enc_y size = {} x {}", enc_y.rows, enc_y.cols);
-
     let m_h_b_1 = compute_m_h_b_1(qe_sk, n_x, n_y, &r_x, &r_y, grp);
 
-    // println!("m_h_b_1 size = {} x {}", m_h_b_1.rows, m_h_b_1.cols);
-
     let ipe_enc_mat = ipe_enc_matrix_expression(&qe_sk.ipe_sk, grp, false, rng);
-
-    // println!("ipe_enc_mat size = {} x {}", ipe_enc_mat.rows, ipe_enc_mat.cols);
 
     let mut enc_h = ipe_enc_mat * m_h_b_1;
     enc_h.mod_inplace(&grp.delta);
@@ -368,7 +351,6 @@ pub fn qe_enc_matrix_same_xy(
         // val1 = (val1 + val2) % &modulo;
         qe_enc_h_nodecomp.set(i, n_x, val1);
     }
-    // let enc_h = decomp.matrix_col(&qe_enc_h_nodecomp);
     let mut enc_h = qe_enc_h_nodecomp.clone();
     if is_decomposed {
         enc_h = decomp.matrix_col(&qe_enc_h_nodecomp);

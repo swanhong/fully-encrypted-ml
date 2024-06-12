@@ -37,6 +37,16 @@ pub struct Argument {
     /// number of trys to check runtime and correctness of the protocol
     #[arg(short, long, default_value_t = 1)]
     pub n_try: usize,
+
+    /// scaling facor for ml algorithm
+    /// (default = 1073741824)
+    #[arg(short, long, default_value_t = 1073741824)]
+    pub scale: i64,
+
+    /// decomposition number
+    /// (default = 4)
+    #[arg(long, default_value_t = 4)]
+    pub n_decomp: usize,
     
     /// (optional) data_ml if you want to run ml example (options: breast, iris)
     /// (default = breast)
@@ -55,6 +65,8 @@ impl Argument {
             data_ml: Some("breast".to_string()),
             bound: 10,
             bit_len: 100,
+            scale: 1073741824,
+            n_decomp: 4,
         }
     }
 }
@@ -66,21 +78,58 @@ impl fmt::Display for Argument {
             "=== pQuant Parameters ===\n\
              target_algorithm   : {}\n\
              bit_len            : {}\n\
-             dim0               : {}\n\
-             dim1               : {}\n\
-             dim2               : {}\n\
-             bound              : {}\n\
-             n_try              : {}\n\
-             data_ml            : {:?}\n\
-            =========================",
-            self.target_algorithm,
+             n_decomp           : {}\n",
+            self.target_algorithm, 
             self.bit_len,
-            self.dim0,
-            self.dim1,
-            self.dim2,
-            self.bound,
-            self.n_try,
-            self.data_ml.as_ref().map(|s| s.clone()).unwrap_or_default(),
-        )
+            self.n_decomp,
+        );
+        if self.target_algorithm == "protocol" {
+            write!(
+                f,
+                "dim0               : {}\n\
+                 dim1               : {}\n\
+                 dim2               : {}\n\
+                 bound              : {}\n\
+                 n_try              : {}\n",
+                self.dim0,
+                self.dim1,
+                self.dim2,
+                self.bound,
+                self.n_try,
+            )
+        } else if self.target_algorithm == "ml" {
+            write!(
+                f,
+                "scale              : {}\n\
+                 data_ml            : {}\n",
+                self.scale,
+                self.data_ml.as_ref().map(|s| s.clone()).unwrap_or_default(),
+            )
+        } else {
+            write!(
+                f,
+                "=== pQuant Parameters ===\n\
+                 target_algorithm   : {}\n\
+                 bit_len            : {}\n\
+                 dim0               : {}\n\
+                 dim1               : {}\n\
+                 dim2               : {}\n\
+                 bound              : {}\n\
+                 n_try              : {}\n\
+                 data_ml            : {}\n\
+                 scale              : {}\n\
+                 n_decomp           : {}",
+                self.target_algorithm,
+                self.bit_len,
+                self.dim0,
+                self.dim1,
+                self.dim2,
+                self.bound,
+                self.n_try,
+                self.data_ml.as_ref().map(|s| s.clone()).unwrap_or_default(),
+                self.scale,
+                self.n_decomp,
+            )
+        }
     }
 }

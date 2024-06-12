@@ -293,23 +293,24 @@ pub fn sample_h(dim: usize, k: usize, t: Integer, modulo: &Integer, rng: &mut Ra
         }
         
         h_pr_0 = h_t * h_0_inv;
-        let mut is_h_pr_0_in_hyperball = true;
-        for i in 0..dim {
-            let col_i = h_pr_0.get_col(i);
-            // compute norm of col_i
-            let mut norm = Integer::from(0);
-            for j in 0..dim + k {
-                norm += col_i[j].clone().pow(2);
-            }
-            norm = norm.sqrt();
-            if norm > t {
-                is_h_pr_0_in_hyperball = false;
-            }
-        }
+        break;
+        // let mut is_h_pr_0_in_hyperball = true;
+        // for i in 0..dim {
+        //     let col_i = h_pr_0.get_col(i);
+        //     // compute norm of col_i
+        //     let mut norm = Integer::from(0);
+        //     for j in 0..dim + k {
+        //         norm += col_i[j].clone().pow(2);
+        //     }
+        //     norm = norm.sqrt();
+        //     if norm > t {
+        //         is_h_pr_0_in_hyperball = false;
+        //     }
+        // }
 
-        if is_h_pr_0_in_hyperball {
-            break;
-        }
+        // if is_h_pr_0_in_hyperball {
+        //     break;
+        // }
     }
     
 

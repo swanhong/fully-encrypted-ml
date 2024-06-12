@@ -238,7 +238,8 @@ pub fn protocol_keygen_i(
     ) -> (Matrix, Matrix) {
         let mut sk_f_mat = Matrix::new(1, 1);
         let mut sk_red_mat = Matrix::new(1, 1);
-        println!("do qe_keygen for {} times", total_mat.rows);
+        println!("do qe_keygen of dim {} for {} times", total_mat.cols, total_mat.rows);
+        let start = SystemTime::now();
         for i in 0..total_mat.rows {
             let row = total_mat.get_row(i);
             let (sk_f, sk_red) = qe_keygen(&qe_sk, &row, grp, decomp);
@@ -249,6 +250,9 @@ pub fn protocol_keygen_i(
             sk_f_mat.set_row(i, &sk_f);
             sk_red_mat.set_row(i, &sk_red);
         }
+        let end = SystemTime::now();
+        let elapsed = end.duration_since(start).unwrap();
+        println!("qe_keygen for {} times, time: {:?}", total_mat.rows, elapsed);
         (sk_f_mat, sk_red_mat)
     }
 
