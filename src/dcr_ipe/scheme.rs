@@ -2,9 +2,7 @@
 extern crate rug;
 use rug::Integer;
 use rug::rand::RandState;
-
 use std::ops::MulAssign;
-use std::time::SystemTime;
 
 use crate::util::group::Group;
 use crate::util::vector::{vec_exp_with_base, vec_pow, int_mod, vec_mod};

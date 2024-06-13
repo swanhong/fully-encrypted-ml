@@ -94,7 +94,7 @@ impl fmt::Display for Group {
 
 pub fn discrete_logarithm(x: Integer, grp: &Group) -> Integer {
     let x_m1 = x.clone() - Integer::from(1);
-    let (quo, rem) = x_m1.div_rem_euc(grp.n.clone());
+    let (quo, _rem) = x_m1.div_rem_euc(grp.n.clone());
     // (x - 1) / grp.n.clone()
     quo
 }

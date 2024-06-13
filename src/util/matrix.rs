@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use rug::{Integer, rand::RandState};
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::str::FromStr;
@@ -645,12 +647,11 @@ pub fn generate_right_inverse_space(
     rng: &mut RandState<'_>,
 ) -> (Matrix, Matrix, Matrix) {
     // variables for randomness
-    let mut rng = RandState::new();
     let d = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("Duration since UNIX_EPOCH failed")
         .as_secs();
-   rng.seed(&Integer::from(d));
+    rng.seed(&Integer::from(d));
 
     let mod_half: Integer = modulus.clone() / 2;
 
@@ -667,7 +668,7 @@ pub fn generate_right_inverse_space(
         let mut val = Integer::from(0);
         while inv == Integer::from(0) {
             // Sample random val (odd)
-            let random_val = mod_half.clone().random_below(&mut rng);
+            let random_val = mod_half.clone().random_below(rng);
             val = random_val.clone() * 2 + 1;
             let val_copy = val.clone();
             inv = match val_copy.invert(modulus) {
@@ -685,7 +686,7 @@ pub fn generate_right_inverse_space(
     a_inv %= modulus;
 
     let n_upper = Matrix::new(row, row);
-    let n_lower = Matrix::random(col - row, row, modulus, &mut rng);
+    let n_lower = Matrix::random(col - row, row, modulus, rng);
     let n = concatenate_row(&n_upper, &n_lower);
 
     let mut null = u_inv * n;

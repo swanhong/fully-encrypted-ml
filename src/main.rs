@@ -9,7 +9,7 @@ mod protocol;
 mod test;
 
 use protocol::algorithm::get_sk_bound;
-use rug::{Integer, Float};
+use rug::Integer;
 use rug::ops::Pow;
 use rug::rand::RandState;
 use util::arguments::Argument;
@@ -439,7 +439,9 @@ fn main() {
                     &mut rng);
                 outputs.set_row(i, &row);
             }
-            println!("outputs = \n{}", outputs);    
+            if n_try >= 2 {
+                println!("outputs = \n{}", outputs);    
+            }
         },
         "ml" => {
             run_protocol_with_ml_data(

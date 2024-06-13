@@ -1,7 +1,9 @@
+#![allow(dead_code)]
+
 use rug::Integer;
 use rug::rand::RandState;
 use crate::util::matrix::{Matrix, concatenate_diag_one, concatenate_col};
-use crate::util::vector::{int_mod};
+use crate::util::vector::int_mod;
 
 pub fn echelon_form(
     m: &mut Matrix,
@@ -55,7 +57,7 @@ pub fn echelon_form(
 
         for i in 0..n_rows {
             let pivot = m.get(pivot_row, pivot_col);
-            let mut ratio = Integer::from(0);
+            let ratio: Integer;
             let pivot_inv = match pivot.clone().invert(&mod_val) {
                 Ok(x) => x,
                 Err(_e) => Integer::from(-1)
@@ -170,6 +172,7 @@ pub fn row_reduce_form(m: &mut Matrix, mod_val: &Integer) -> (Matrix, i32) {
     (row_ops_matrix.clone(), rank)
 }
 
+#[allow(dead_code)]
 pub fn row_reduce_form_integer(m: &mut Matrix) -> (Matrix, i32) {
     let n_rows = m.rows();
     let n_cols = m.cols();
@@ -239,7 +242,7 @@ pub fn matrix_inverse(
     let n = m.rows;
     let mut m_inv = Matrix::get_identity(n);
     let mut m_aug = concatenate_col(m, &m_inv);
-    let (pivot_cols, free_vars, r) = echelon_form(&mut m_aug, mod_val);
+    let (_pivot_cols, _free_vars, r) = echelon_form(&mut m_aug, mod_val);
     
     if r != -1 {
         for i in 0..n {
@@ -255,7 +258,7 @@ pub fn matrix_inverse(
     }
 }
 
-pub fn sample_h(dim: usize, k: usize, t: Integer, modulo: &Integer, rng: &mut RandState<'_>) -> (Matrix, Matrix) {
+pub fn sample_h(dim: usize, k: usize, _t: Integer, modulo: &Integer, rng: &mut RandState<'_>) -> (Matrix, Matrix) {
     // sample two matrices h_left_1 and h_right_1
     
     // h_left is dim * (dim + k ) ternary matrix
@@ -265,10 +268,10 @@ pub fn sample_h(dim: usize, k: usize, t: Integer, modulo: &Integer, rng: &mut Ra
     // h_left_1 = (h_left, 1)
     // h_right_1 = (h_right, 1)
 
-    let mut h_0: Matrix = Matrix::new(dim, dim + k);
-    let mut h_t: Matrix = Matrix::new(dim + k, dim);
-    let mut h_0_inv: Matrix = Matrix::new(dim, dim);
-    let mut h_pr_0: Matrix = Matrix::new(dim + k, dim);
+    let mut h_0: Matrix; // dim * (dim + k)
+    let mut h_t: Matrix; // (dim + k) * dim
+    let h_0_inv: Matrix; // dim * dim
+    let h_pr_0: Matrix; // (dim + k) * dim
 
     loop {
         loop {
@@ -285,7 +288,7 @@ pub fn sample_h(dim: usize, k: usize, t: Integer, modulo: &Integer, rng: &mut Ra
                     h_0_inv = m_inv.clone();
                     break;
                 }
-                Err(rank) => {
+                Err(_rank) => {
                     continue;
                 }
             }
@@ -334,11 +337,11 @@ pub fn sample_gamma(
     // gamma_right = gamma^t * (gamma * gamma^t)^-1 
     // gamma_left_1 = (gamma_left, 1)
     // gamma_right_1 = (gamma_right, 1)
-    let mut gamma_0 = Matrix::new(1, 1);
-    let mut gamma_0_t = Matrix::new(1, 1);
-    let mut gamma_0_inv = Matrix::new(1, 1);
+    let mut gamma_0: Matrix;
+    let mut gamma_0_t: Matrix;
+    let gamma_0_inv: Matrix;
 
-    while true {
+    loop {
         gamma_0 = Matrix::random( dim, dim + k, &Integer::from(2), rng);
         gamma_0_t = gamma_0.transpose();
         let mut tmp = gamma_0.clone() * gamma_0_t.clone();
@@ -348,7 +351,7 @@ pub fn sample_gamma(
                 gamma_0_inv = m_inv.clone();
                 break;
             }
-            Err(rank) => {
+            Err(_rank) => {
                 continue;
             }
         }

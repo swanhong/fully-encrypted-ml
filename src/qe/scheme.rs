@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 extern crate rug;
 use rug::Integer;
 use rug::rand::RandState;
@@ -10,8 +12,6 @@ use crate::util::vector::*;
 use crate::util::decomp::Decomp;
 use crate::ipe::scheme::{ipe_keygen, ipe_enc, ipe_enc_matrix_expression, ipe_dec};
 use super::keys::QeSk;
-// timechecking
-use std::time::{Duration, SystemTime};
 
 pub fn qe_setup(grp: &Group, n_x: usize, n_y: usize, b: usize, rng: &mut RandState<'_>) -> QeSk {
     QeSk::new(grp, n_x, n_y, b, rng)

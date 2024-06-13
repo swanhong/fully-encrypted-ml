@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use rug::Integer;
@@ -52,8 +54,6 @@ pub fn read_float_matrix(
 
     // Initialize variables
     let mut matrix: Vec<Vec<f64>> = Vec::new();
-    let mut row_count = 0;
-    let mut column_count = 0;
 
     // Process each line of the file
     for line in reader.lines() {
@@ -63,14 +63,8 @@ pub fn read_float_matrix(
                 .map(|s| s.trim().parse().expect("Failed to parse value"))
                 .collect();
 
-            // Update column count
-            column_count = row.len();
-
             // Add the row to the matrix
             matrix.push(row);
-
-            // Update row count
-            row_count += 1;
         }
     }    matrix
 }

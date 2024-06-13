@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use rug::Integer;
 use super::{matrix::Matrix, group::Group};
 use crate::util::vector::int_mod;
@@ -16,8 +18,7 @@ impl Decomp {
     pub fn new(dim: usize, grp: &Group) -> Decomp {
         let modulo = grp.delta.clone();
         let modulo_exp = grp.n_sq.clone();
-        let modulo_exp_sq = modulo_exp.clone() * modulo_exp.clone();
-        let (mut base, rem) = modulo_exp.clone().root_rem(Integer::new(), dim as u32);
+        let (mut base, _rem) = modulo_exp.clone().root_rem(Integer::new(), dim as u32);
         base = base.clone() + 1;
         Decomp {
             base,
@@ -123,7 +124,7 @@ impl Decomp {
     pub fn matrix_pow_row(&self, a: &Matrix) -> Matrix {
         let mut res = Matrix::new(a.rows * self.dim, a.cols);
         for j in 0..a.cols {
-            let mut col_pow = self.vector_pow(&a.get_col(j));
+            let col_pow = self.vector_pow(&a.get_col(j));
             res.set_col(j, &col_pow);
         }
         res

@@ -1,4 +1,6 @@
 // ipe.rs
+#![allow(dead_code)]
+
 extern crate rug;
 use rug::Integer;
 use rug::rand::RandState;
@@ -8,7 +10,6 @@ use crate::util::group::discrete_logarithm;
 use crate::util::matrix::*;
 use crate::util::vector::*;
 use super::keys::IpeSk;
-use std::time::{Duration, SystemTime};
 
 pub fn ipe_setup(group: &Group, dim: usize, b: usize, rng: &mut RandState<'_>) -> IpeSk {
     IpeSk::new(dim, b, group, rng)

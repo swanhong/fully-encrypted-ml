@@ -1,9 +1,9 @@
-use rug::ops::DivRounding;
+#![allow(dead_code)]
+
 use rug::{Integer, Complete};
 use rug::rand::RandState;
 use crate::util::group::Group;
 use rayon::prelude::*;
-use std::time::SystemTime;
 
 pub fn gen_random_vector(dim: usize, bound: &Integer, rand: &mut RandState<'_>) -> Vec<Integer> {
     // let mut rand = RandState::new(); // Create a single RandState object

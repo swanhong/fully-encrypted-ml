@@ -2,6 +2,7 @@ pub mod keys;
 pub mod scheme;
 
 mod tests {
+    #![allow(unused_imports)]
     use crate::util::group::Group;
 
     use rug::Integer;

@@ -54,22 +54,22 @@ pub struct Argument {
     pub data_ml: Option<String>,
 }
 
-impl Argument {
-    pub fn new() -> Argument {
-        Argument {
-            target_algorithm: "protocol".to_string(),
-            dim0: 5,
-            dim1: 4,
-            dim2: 3,
-            n_try: 1,
-            data_ml: Some("breast".to_string()),
-            bound: 10,
-            bit_len: 100,
-            scale: 1073741824,
-            n_decomp: 4,
-        }
-    }
-}
+// impl Argument {
+//     pub fn new() -> Argument {
+//         Argument {
+//             target_algorithm: "protocol".to_string(),
+//             dim0: 5,
+//             dim1: 4,
+//             dim2: 3,
+//             n_try: 1,
+//             data_ml: Some("breast".to_string()),
+//             bound: 10,
+//             bit_len: 100,
+//             scale: 1073741824,
+//             n_decomp: 4,
+//         }
+//     }
+// }
 
 impl fmt::Display for Argument {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -82,7 +82,7 @@ impl fmt::Display for Argument {
             self.target_algorithm, 
             self.bit_len,
             self.n_decomp,
-        );
+        )?;
         if self.target_algorithm == "protocol" {
             write!(
                 f,
