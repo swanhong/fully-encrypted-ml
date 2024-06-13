@@ -11,8 +11,8 @@ use crate::util::matrix::*;
 use crate::util::vector::*;
 use super::keys::IpeSk;
 
-pub fn ipe_setup(group: &Group, dim: usize, b: usize, rng: &mut RandState<'_>) -> IpeSk {
-    IpeSk::new(dim, b, group, rng)
+pub fn ipe_setup(group: &Group, dim: usize, q: usize, rng: &mut RandState<'_>) -> IpeSk {
+    IpeSk::new(dim, q, group, rng)
 }
 
 
@@ -61,6 +61,7 @@ pub fn ipe_enc(
     // r = 2 * N * r'
     let r = &grp.n.clone() * Integer::from(2) * r_pr.clone();
 
+    // d_perp_rand = D_perp * rand
     let rand: Vec<Integer> = gen_random_vector(sk.d_perp.cols, &mod_val, rng);
     let mut d_perp_rand = sk.d_perp.mul_vec(&rand);
     vec_mod(&mut d_perp_rand, &mod_val);
@@ -128,6 +129,7 @@ pub fn ipe_dec(sk_f: &Vec<Integer>, ctxt: &Vec<Integer>, grp: &Group, solve_dl: 
     if solve_dl {
         out = discrete_logarithm(out.clone(), &grp);
     }
+    int_mod(&mut out, &grp.delta);
     out
 }
 

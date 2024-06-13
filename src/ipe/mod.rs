@@ -19,15 +19,14 @@ mod tests {
         .expect("Duration since UNIX_EPOCH failed");
         rand.seed(&Integer::from(d.as_secs()));
         
-        let grp = Group::new(10); // Initialize the group        
-        // println!("{}", grp);
+        let grp = Group::new(100); // Initialize the group        
         
-        let dim = 5;
-        let b = dim * 2 + 1;
+        let dim = 3;
+        let q = 2 * dim + 1;
         let bound = 10;
         // Generate random inputs for sk and y
-        let mut x = gen_random_vector(dim, &Integer::from(bound), &mut rand);
-        let mut y = gen_random_vector(dim, &Integer::from(bound), &mut rand);
+        let mut x = gen_random_vector(dim, &Integer::from(2 * bound), &mut rand);
+        let mut y = gen_random_vector(dim, &Integer::from(2 * bound), &mut rand);
 
         for i in 0..dim {
             x[i] -= Integer::from(bound / 2);
@@ -37,7 +36,7 @@ mod tests {
         // Perform setup
         println!("start ipe_setup");
         let start = SystemTime::now();
-        let sk = ipe_setup(&grp, dim, b, &mut rand);
+        let sk = ipe_setup(&grp, dim, q, &mut rand);
         let end = start.elapsed();
         println!("Time elapsed in ipe_setup is: {:?}", end);
 
@@ -47,14 +46,11 @@ mod tests {
         let sk_f = ipe_keygen(&sk, &y, &grp);
         let end = start.elapsed();
         println!("Time elapsed in ipe_keygen is: {:?}", end);
-        
-        // Print the generated secret key
-        // println!("sk_f: {:?}", sk_f);
 
         // Perform encryption
         println!("start ipe_enc");
         let original = false;
-        let mut ctxt: Vec<Integer> = Vec::new();
+        let mut ctxt: Vec<Integer>;
         let start = SystemTime::now();
         if original {
             println!("run original enc");

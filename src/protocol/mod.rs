@@ -40,7 +40,7 @@ mod test {
 
         let decomp = Decomp::new(4, &grp);
         // println!("decomp = {}", decomp);
-        let mut x = gen_random_vector(dim, &Integer::from(bound), &mut rng);
+        let x = gen_random_vector(dim, &Integer::from(bound), &mut rng);
         let mut f_mat = Matrix::new(f_num, dim * dim);
         for i in 0..f_num {
             let f = gen_random_vector(dim, &Integer::from(bound), &mut rng);
@@ -53,8 +53,8 @@ mod test {
         let start = SystemTime::now();
         let ((dcr_sk, dcr_pk), 
             qe_sk, 
-            qe_sk_vec,
-            qe_sk_end,
+            _qe_sk_vec,
+            _qe_sk_end,
         ) = protocol_setup(
             vec![dim], 
             f_num, 
@@ -164,9 +164,6 @@ mod test {
         let dim = 5;
         let k = 2;
         let t = get_smallest_t(dim, k, 128);
-        println!("t = {}", t);
-        let grp = Group::new(100);
-        // let n = grp.delta;
         let n = Integer::from(101);
 
         let mut rng = RandState::new(); // Create a single RandState object
@@ -300,7 +297,7 @@ mod test {
         println!("m_left_inv = {}", m_left_inv);
 
         // test mult
-        let mut m2 = m_left_inv * m.clone();
+        let m2 = m_left_inv * m.clone();
         println!("m2 = \n{}", m2);
     }
 }

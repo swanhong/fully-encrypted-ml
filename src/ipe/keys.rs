@@ -19,12 +19,12 @@ pub struct IpeSk {
 }
 
 impl IpeSk {
-    pub fn new(dim: usize, b: usize, grp: &Group, rng: &mut RandState<'_>) -> IpeSk {
+    pub fn new(dim: usize, q: usize, grp: &Group, rng: &mut RandState<'_>) -> IpeSk {
         // modulus = grp.delta
         // a = random vector of size 2 mod b
-        // U = random matrix of size (4*dim) x 2
+        // U = random matrix of size (dim) x 2
         // U_t = transpose of U
-        // D = random matrix of size (4*dim + 2) x (4*dim + 2 + q)
+        // D = random matrix of size (dim + 2) x (dim + 2 + q)
         // D_inv = right inverse of D
         // D_perp = null space basis of D
         // sk1 = (D_inv_left + D_inv_right * U) * a
@@ -37,7 +37,7 @@ impl IpeSk {
 
         let u = Matrix::random(dim, 2, &grp.delta, rng);
         let u_t = u.transpose();
-        let (d, d_inv, d_perp) = generate_right_inverse_space(dim + 2, 4*dim + 2 + b, &grp.delta, rng);
+        let (d, d_inv, d_perp) = generate_right_inverse_space(dim + 2, dim + 2 + q, &grp.delta, rng);
         
         // sk1 = (D_inv_left + D_inv_right * U) * a
         let mut d_inv_left = Matrix::new(d_inv.rows, 2);

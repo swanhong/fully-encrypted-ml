@@ -19,7 +19,7 @@ pub struct QeSk {
 
 
 impl QeSk {
-    pub fn new(grp: &Group, n_x: usize, n_y: usize, b: usize, rng: &mut RandState<'_>) -> QeSk {
+    pub fn new(grp: &Group, n_x: usize, n_y: usize, q: usize, rng: &mut RandState<'_>) -> QeSk {
 
         let modulo = grp.delta.clone();
         
@@ -36,10 +36,10 @@ impl QeSk {
         let m_down = Matrix::tensor_product(&i_n_x, &w_t, &modulo);
         let m = concatenate_row(&m_up, &m_down);
         
-        let (d_x, d_x_inv, d_x_null) = generate_right_inverse_space(n_x, n_x + b, &modulo, rng);
-        let (d_y, d_y_inv, d_y_null) = generate_right_inverse_space(n_y, n_y + b, &modulo, rng);
+        let (d_x, d_x_inv, d_x_null) = generate_right_inverse_space(n_x, n_x + q, &modulo, rng);
+        let (d_y, d_y_inv, d_y_null) = generate_right_inverse_space(n_y, n_y + q, &modulo, rng);
 
-        let ipe_sk = IpeSk::new(2 * (n_x + n_y), b, &grp, rng);
+        let ipe_sk = IpeSk::new(2 * (n_x + n_y), q, &grp, rng);
 
         QeSk {
             v,

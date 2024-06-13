@@ -66,9 +66,9 @@ mod tests {
 
         let original = false;
         
-        let mut ctxt_x = Vec::new();
-        let mut ctxt_y = Vec::new();
-        let mut ctxt_h = Vec::new(); 
+        let mut ctxt_x: Vec<Integer>;
+        let mut ctxt_y: Vec<Integer>;
+        let mut ctxt_h: Vec<Integer>;
         if original {
             let start = SystemTime::now();
             let (enc_x, enc_y, enc_h) = qe_enc(&qe_sk, &x, &y, &grp, &decomp, &mut rand);
@@ -164,8 +164,8 @@ mod tests {
 
         let decomp = Decomp::new(4, &grp);
 
-        let mut x = gen_random_vector(n_x, &Integer::from(bound), &mut rand);
-        let mut f = gen_random_vector(n_x * n_x, &Integer::from(bound), &mut rand);
+        let x = gen_random_vector(n_x, &Integer::from(bound), &mut rand);
+        let f = gen_random_vector(n_x * n_x, &Integer::from(bound), &mut rand);
 
 
         // compute out2 = inner product <f, x tensor y>
@@ -197,9 +197,9 @@ mod tests {
         // println!("lengths are {} and {}", sk_f.len(), sk_red.len());
 
         
-        let mut ctxt_x = Vec::new();
-        let mut ctxt_y = Vec::new();
-        let mut ctxt_h = Vec::new(); 
+        let mut ctxt_x: Vec<Integer>;
+        let mut ctxt_y: Vec<Integer>;
+        let mut ctxt_h: Vec<Integer>;
         // Perform encryption
         let start = SystemTime::now();
         let (enc_mat_x, enc_mat_y, enc_mat_h) = qe_enc_matrix_same_xy(&qe_sk, n_x, &grp, &decomp, &mut rand, true);
