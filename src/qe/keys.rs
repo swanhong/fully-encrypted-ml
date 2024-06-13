@@ -20,7 +20,6 @@ pub struct QeSk {
 
 impl QeSk {
     pub fn new(grp: &Group, n_x: usize, n_y: usize, q: usize, rng: &mut RandState<'_>) -> QeSk {
-
         let modulo = grp.delta.clone();
         
         let v = Matrix::random(n_x, 2, &modulo, rng);

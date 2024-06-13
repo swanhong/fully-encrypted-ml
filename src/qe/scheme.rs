@@ -13,8 +13,8 @@ use crate::util::decomp::Decomp;
 use crate::ipe::scheme::{ipe_keygen, ipe_enc, ipe_enc_matrix_expression, ipe_dec};
 use super::keys::QeSk;
 
-pub fn qe_setup(grp: &Group, n_x: usize, n_y: usize, b: usize, rng: &mut RandState<'_>) -> QeSk {
-    QeSk::new(grp, n_x, n_y, b, rng)
+pub fn qe_setup(grp: &Group, n_x: usize, n_y: usize, q: usize, rng: &mut RandState<'_>) -> QeSk {
+    QeSk::new(grp, n_x, n_y, q, rng)
 }
 
 pub fn qe_keygen(
