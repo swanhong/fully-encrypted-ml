@@ -6,7 +6,7 @@ mod test {
     use rug::Integer;
     use rug::rand::RandState;
     use std::time::SystemTime;
-    use crate::protocol::algorithm::{row_reduce_form, row_reduce_form_integer, get_smallest_t};
+    use crate::protocol::algorithm::{row_reduce_form, row_reduce_form_integer};
     use crate::protocol::scheme::{protocol_setup, protocol_keygen_switch, protocol_enc_init, protocol_keyswitch, protocol_keygen_i, protocol_dec_i, protocol_keygen_end, protocol_dec_end};
     use crate::util::group::Group;
 
@@ -32,7 +32,6 @@ mod test {
         
         let dim = 5;
         let k = 1;
-        let t = Integer::from(1000000000);
         let f_num = dim;
         // let b = 1;
         let bound = 10;
@@ -58,12 +57,12 @@ mod test {
         ) = protocol_setup(
             vec![dim], 
             f_num, 
-            k, 
+            k,
             &sk_bound, 
             &grp, 
             &mut rng);
 
-        let (h_left, h_right) = sample_h(dim, k, t, &grp.delta, &mut rng);
+        let (h_left, h_right) = sample_h(dim, k, &grp.delta, &mut rng);
         let (gamma_left, gamma_right) = sample_gamma(dim, dim, &grp.delta, &mut rng);
         let end = start.elapsed();
         println!("Time elapsed in protocol_setup is: {:?}", end);
@@ -109,8 +108,22 @@ mod test {
 
         println!("start protocol_keygen_i");
         let start = SystemTime::now();
-        let ((qe_b_x, qe_b_y, qe_b_h), (sk_f_mat_x, sk_f_mat_y, sk_f_mat_h), (sk_red_mat_x, sk_red_mat_y, sk_red_mat_h))
-            = protocol_keygen_i(&qe_sk, &qe_sk, &h_right, &h_left, dim, k, &f_mat, &decomp, &grp, &mut rng);
+        let (
+            (qe_b_x, qe_b_y, qe_b_h),
+            (sk_f_mat_x, sk_f_mat_y, sk_f_mat_h),
+            (sk_red_mat_x, sk_red_mat_y, sk_red_mat_h)
+        ) = protocol_keygen_i(
+            &qe_sk,
+            &qe_sk,
+            &h_right,
+            &h_left,
+            dim,
+            k,
+            &f_mat,
+            &decomp,
+            &grp,
+            &mut rng
+        );
         let end = start.elapsed();
         println!("Time elapsed in protocol_keygen_i is: {:?}", end);
 
@@ -163,7 +176,6 @@ mod test {
     fn test_matrix_h_and_gamma() {
         let dim = 5;
         let k = 2;
-        let t = get_smallest_t(dim, k, 128);
         let n = Integer::from(101);
 
         let mut rng = RandState::new(); // Create a single RandState object
@@ -172,7 +184,7 @@ mod test {
         // .expect("Duration since UNIX_EPOCH failed");
         // rng.seed(&Integer::from(d.as_secs()));
 
-        let (h_left_1, h_right_1) = sample_h(dim, k, t, &n, &mut rng);
+        let (h_left_1, h_right_1) = sample_h(dim, k, &n, &mut rng);
 
         println!("h_left_1:");
         println!("{}", h_left_1);

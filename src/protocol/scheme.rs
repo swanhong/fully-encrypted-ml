@@ -82,7 +82,6 @@ pub fn protocol_keygen_switch(
         switch_key_x.mod_inplace(modulo);
 
         let mut switch_key_dcr_x = vec![Integer::from(0); switch_key_x.rows];
-        // println!("switch_key_x = \n{}", switch_key_x);
         for i in 0..switch_key_x.rows {
             let row = switch_key_x.get_row(i);
             switch_key_dcr_x[i] = dcr_keygen(&dcr_sk, &row);
@@ -149,6 +148,9 @@ pub fn protocol_keyswitch(
         decomp.vector_inv(&ct_out)
     }
 
+    println!("do dcr_dec_multi for {} x {} times", switch_key_x.rows, switch_key_x.cols);
+    println!("do dcr_dec_multi for {} y {} times", switch_key_y.rows, switch_key_y.cols);
+    println!("do dcr_dec_multi for {} h {} times", switch_key_h.rows, switch_key_h.cols);
     let ct_out_x = dcr_dec_multi(&ct_in, &switch_key_x, &switch_key_dcr_x, &decomp, &grp);
     let ct_out_y = dcr_dec_multi(&ct_in, &switch_key_y, &switch_key_dcr_y, &decomp, &grp);
     let ct_out_h = dcr_dec_multi(&ct_in, &switch_key_h, &switch_key_dcr_h, &decomp, &grp);
@@ -283,6 +285,7 @@ pub fn protocol_dec_i(
         decomp: &Decomp,
     ) -> Vec<Integer> {
         let mut ct_out = vec![Integer::from(0); sk_f_mat.rows];
+        println!("run qe_dec of dim {} for {} times", sk_f_mat.cols, sk_f_mat.rows);
         for i in 0..sk_f_mat.rows {
             let sk_f = sk_f_mat.get_row(i);
             let sk_red = sk_red_mat.get_row(i);
@@ -334,6 +337,7 @@ pub fn protocol_keygen_end(
 
     let mut sk_f_mat = Matrix::new(1, 1);
     let mut sk_red_mat = Matrix::new(1, 1);
+    println!("do qe_keygen of dim {} for {} times", fhmhm.cols, fhmhm.rows);
     for i in 0..fhmhm.rows {
         let row = fhmhm.get_row(i);
         let (sk_f, sk_red) = qe_keygen(&qe_sk, &row, grp, decomp);
@@ -354,6 +358,7 @@ pub fn protocol_dec_end(
     grp: &Group,
 ) -> Vec<Integer> {
     let mut ct_out = vec![Integer::from(0); sk_f_mat.rows];
+    println!("run qe_dec of dim {} for {} times", sk_f_mat.cols, sk_f_mat.rows);
     for i in 0..sk_f_mat.rows {
         let sk_f = sk_f_mat.get_row(i);
         let sk_red = sk_red_mat.get_row(i);

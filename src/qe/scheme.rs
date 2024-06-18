@@ -330,7 +330,6 @@ pub fn qe_enc_matrix_same_xy(
 
     let ipe_enc_mat = ipe_enc_matrix_expression(&qe_sk.ipe_sk, grp, false, rng);
     let m_h_b_1 = compute_m_h_b_1(qe_sk, n_x, n_x, &r_x, &r_y, grp);
-    
     let mut qe_enc_h_origin = ipe_enc_mat * m_h_b_1;
     qe_enc_h_origin.mod_inplace(&modulo);
 

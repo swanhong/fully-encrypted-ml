@@ -19,7 +19,7 @@ use crate::util::group::Group;
 use crate::util::matrix::{Matrix, eval_quadratic_multivariate, concatenate_col, concatenate_vec_row};
 use crate::util::vector::{gen_random_vector, vec_mod};
 use crate::util::decomp::Decomp;
-use crate::protocol::algorithm::{sample_h, sample_gamma, get_smallest_t};
+use crate::protocol::algorithm::{sample_h, sample_gamma};
 use crate::parse::file_reader::read_matrix;
 use clap::Parser;
 
@@ -40,9 +40,6 @@ fn run_protocol_start_to_end(
     let dim2 = dim_vec[1];
     let dim3 = dim_vec[2];
     let k = 1;
-    let t1 = get_smallest_t(dim, k, 128);
-    let t2 = get_smallest_t(dim2, k, 128);
-    
     let sk_bound= get_sk_bound(dim, bound, 128, &grp);
     
     let decomp = Decomp::new(n_decomp, &grp);
@@ -79,8 +76,8 @@ fn run_protocol_start_to_end(
         &grp, 
         rng);
     
-    let (h0_left, h0_right) = sample_h(dim, k, t1, &grp.delta, rng);
-    let (h1_left, h1_right) = sample_h(dim2, k, t2, &grp.delta, rng);
+    let (h0_left, h0_right) = sample_h(dim, k, &grp.delta, rng);
+    let (h1_left, h1_right) = sample_h(dim2, k, &grp.delta, rng);
 
     let (gamma_left, gamma_right) = sample_gamma(dim, dim, &grp.delta, rng);
     let time_setup = start.elapsed();
@@ -264,8 +261,6 @@ fn run_protocol_with_ml_data(
     let dim2 = f1.rows;
     let dim3 = f2.rows;
     let k = 1; // fixed
-    let t1 = get_smallest_t(dim, k, 128);
-    let t2 = get_smallest_t(dim2, k, 128);
     let sk_bound = get_sk_bound(dim, 10 * scale as usize, 128, &grp);
 
     // Perform setup
@@ -284,8 +279,8 @@ fn run_protocol_with_ml_data(
         &mut rng);
     println!("protocol setup done?");
     
-    let (h0_left, h0_right) = sample_h(dim, k, t1, &grp.delta, &mut rng);
-    let (h1_left, h1_right) = sample_h(dim2, k, t2, &grp.delta, &mut rng);
+    let (h0_left, h0_right) = sample_h(dim, k, &grp.delta, &mut rng);
+    let (h1_left, h1_right) = sample_h(dim2, k, &grp.delta, &mut rng);
     let (gamma_left, gamma_right) = sample_gamma(dim, dim, &grp.delta, &mut rng);
     let time_setup = start.elapsed();
     println!("Time elapsed in protocol_setup is: {:?}", time_setup);
