@@ -6,15 +6,18 @@ use crate::util::group::Group;
 use rayon::prelude::*;
 
 pub fn gen_random_vector(dim: usize, bound: &Integer, rand: &mut RandState<'_>) -> Vec<Integer> {
-    // let mut rand = RandState::new(); // Create a single RandState object
-    // let d = SystemTime::now()
-    // .duration_since(SystemTime::UNIX_EPOCH)
-    // .expect("Duration since UNIX_EPOCH failed");
-    // rand.seed(&Integer::from(d.as_secs()));
-    
     let mut vec = vec![Integer::from(0); dim];
     for i in 0..dim {
         vec[i] = bound.clone().random_below(rand);
+    }
+    vec
+}
+
+pub fn gen_random_vector_signed(dim: usize, bound: &Integer, rand: &mut RandState<'_>) -> Vec<Integer> {
+    let mut vec = vec![Integer::from(0); dim];
+    let bound2 = bound.clone() * Integer::from(2); 
+    for i in 0..dim {
+        vec[i] = bound2.clone().random_below(rand) - bound;
     }
     vec
 }

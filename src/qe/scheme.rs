@@ -13,8 +13,8 @@ use crate::util::decomp::Decomp;
 use crate::ipe::scheme::{ipe_keygen, ipe_enc, ipe_enc_matrix_expression, ipe_dec};
 use super::keys::QeSk;
 
-pub fn qe_setup(grp: &Group, n_x: usize, n_y: usize, q: usize, rng: &mut RandState<'_>) -> QeSk {
-    QeSk::new(grp, n_x, n_y, q, rng)
+pub fn qe_setup(grp: &Group, dim: usize, q: usize, rng: &mut RandState<'_>) -> QeSk {
+    QeSk::new(grp, dim, q, rng)
 }
 
 pub fn qe_keygen(
@@ -48,7 +48,6 @@ pub fn qe_keygen(
 pub fn qe_enc(
     sk: &QeSk,
     x: &Vec<Integer>,
-    y: &Vec<Integer>,
     grp: &Group,
     decomp: &Decomp,
     rng: &mut RandState<'_>,
@@ -90,13 +89,7 @@ pub fn qe_enc(
         let mut ctxt_x = d_inv.mul_vec(&right_x);
         ctxt_x = vec_add(&ctxt_x, &d_perp_rand);
         vec_mod(&mut ctxt_x, &modulo);
-        
-        // let ctxt_out = decomp.vector(&ctxt_x);
-        // println!("ctxt_x size = {}", ctxt_x.len());
-        // println!("ctxt_x = {:?}", ctxt_x);
-        // println!("ctxt_out size = {}", ctxt_out.len());
-        // println!("ctxt_out = {:?}", ctxt_out);
-        
+
         (decomp.vector(&ctxt_x), r_x)
     }
 
@@ -116,14 +109,14 @@ pub fn qe_enc(
             &sk.w, 
             &sk.d_y_null, 
             &sk.d_y_inv, 
-            &y, 
+            &x, 
             &grp, 
             decomp, 
             rng, 
             false
         );
 
-    let h_up = tensor_product_vecs(&r_x, &y, &mod_val);
+    let h_up = tensor_product_vecs(&r_x, &x, &mod_val);
     let h_down = tensor_product_vecs(&x, &r_y, &mod_val);
 
     let mut h_join = vec![Integer::from(0); h_up.len() + h_down.len()];

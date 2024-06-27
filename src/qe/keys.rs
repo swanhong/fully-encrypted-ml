@@ -19,26 +19,25 @@ pub struct QeSk {
 
 
 impl QeSk {
-    pub fn new(grp: &Group, n_x: usize, n_y: usize, q: usize, rng: &mut RandState<'_>) -> QeSk {
+    pub fn new(grp: &Group, dim: usize, q: usize, rng: &mut RandState<'_>) -> QeSk {
         let modulo = grp.delta.clone();
         
-        let v = Matrix::random(n_x, 2, &modulo, rng);
-        let w = Matrix::random(n_y, 2, &modulo, rng);
-              
-        let i_n_x = Matrix::get_identity(n_x);
-        let i_n_y = Matrix::get_identity(n_y);
+        let v = Matrix::random(dim, 2, &modulo, rng);
+        let w = Matrix::random(dim, 2, &modulo, rng);
+
+        let i_dim = Matrix::get_identity(dim);
 
         let v_t = v.transpose();
         let w_t = w.transpose();
 
-        let m_up = Matrix::tensor_product(&v_t, &i_n_y, &modulo);
-        let m_down = Matrix::tensor_product(&i_n_x, &w_t, &modulo);
+        let m_up = Matrix::tensor_product(&v_t, &i_dim, &modulo);
+        let m_down = Matrix::tensor_product(&i_dim, &w_t, &modulo);
         let m = concatenate_row(&m_up, &m_down);
         
-        let (d_x, d_x_inv, d_x_null) = generate_right_inverse_space(n_x, n_x + q, &modulo, rng);
-        let (d_y, d_y_inv, d_y_null) = generate_right_inverse_space(n_y, n_y + q, &modulo, rng);
+        let (d_x, d_x_inv, d_x_null) = generate_right_inverse_space(dim, dim + q, &modulo, rng);
+        let (d_y, d_y_inv, d_y_null) = generate_right_inverse_space(dim, dim + q, &modulo, rng);
 
-        let ipe_sk = IpeSk::new(2 * (n_x + n_y), q, &grp, rng);
+        let ipe_sk = IpeSk::new(4 * dim, q, &grp, rng);
 
         QeSk {
             v,

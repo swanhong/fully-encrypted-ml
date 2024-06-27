@@ -21,14 +21,14 @@ pub fn protocol_setup(
 ) -> ((Vec<Integer>, Vec<Integer>), QeSk, Vec<QeSk>, QeSk) {
     let dim = dim_vec[0];
     let (dcr_sk, dcr_pk) = dcr_setup(2 * dim + 1, sk_bound, grp, rng);
-    let qe_sk_init = qe_setup(grp, dim + k, dim + k, 2 * (dim + k) + 1, rng);
+    let qe_sk_init = qe_setup(grp, dim + k, 2 * (dim + k) + 1, rng);
     let mut qe_sk_fcn = Vec::with_capacity(f_num);
     for i in 1..dim_vec.len()-1 {
         let dim = dim_vec[i];
-        qe_sk_fcn.push(qe_setup(grp, dim + k, dim + k, 2 * (dim + k) + 1, rng));
+        qe_sk_fcn.push(qe_setup(grp, dim + k, 2 * (dim + k) + 1, rng));
     }
     let dim = dim_vec[dim_vec.len()-1];
-    let qe_sk_end = qe_setup(grp, dim + k, dim + k, 2 * (dim + k) + 1, rng);
+    let qe_sk_end = qe_setup(grp, dim + k, 2 * (dim + k) + 1, rng);
 
     ((dcr_sk, dcr_pk), qe_sk_init, qe_sk_fcn, qe_sk_end)
 }
