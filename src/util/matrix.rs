@@ -640,22 +640,135 @@ pub fn sample_unimodular_matrix_from_perm(dim: usize, perm_loops: usize) -> (Mat
 }
 
 
+pub fn echelon_form(
+    m: &mut Matrix,
+    mod_val: &Integer,
+) -> (Vec<usize>, Vec<usize>, i32) {
+    let n_rows = m.rows();
+    let n_cols = m.cols();
+
+    let mut pivot_cols: Vec<usize> = Vec::new();
+    let mut free_vars: Vec<usize> = Vec::new();
+    let mut rank = -1;
+    let mut pivot_row = 0;
+    let mut pivot_col = 0;
+
+    while pivot_row < n_rows && pivot_col < n_cols {
+        let mut pivot = m.get(pivot_row, pivot_col);
+        
+        while pivot == 0 {
+            // if pivot_col < n_cols - 1 {
+            //     free_vars.push(pivot_col);
+            //     pivot_col += 1;
+            // } else {
+            //     free_vars.push(pivot_col);
+            //     pivot_row += 1;
+            //     pivot_col = 0;
+            // }
+            pivot_row += 1;
+
+            if pivot_row >= n_rows {
+                return (pivot_cols, free_vars, -1);
+            }
+
+            pivot = m.get(pivot_row, pivot_col);
+        }
+
+        rank += 1;
+        let pivot = m.get(pivot_row, pivot_col);
+        let pivot_inv = match pivot.clone().invert(&mod_val) {
+            Ok(x) => x,
+            Err(_e) => Integer::from(-1)
+        };
+
+        if pivot_inv != Integer::from(-1) {
+            for j in pivot_col..n_cols {
+                let val = m.get(pivot_row, j) * &pivot_inv % mod_val;
+                m.set(pivot_row, j, val);
+            }
+        } else {
+            return (pivot_cols, free_vars, -1);
+        }
+
+        for i in 0..n_rows {
+            let pivot = m.get(pivot_row, pivot_col);
+            let ratio: Integer;
+            let pivot_inv = match pivot.clone().invert(&mod_val) {
+                Ok(x) => x,
+                Err(_e) => Integer::from(-1)
+            };
+            if pivot_inv != Integer::from(-1) {
+                let val1 = m.get(i, pivot_col);
+                ratio = val1 * pivot_inv % mod_val;
+            } else {
+                return (pivot_cols, free_vars, -1);
+            }
+
+            for j in 0..n_cols {
+                if i != pivot_row {
+                    let val = m.get(pivot_row, j) * ratio.clone();
+                    let mut entry = m.get(i, j);
+                    entry = (entry - val) % mod_val;
+                    m.set(i, j, entry);
+                }
+            }
+        }
+
+        pivot_cols.push(pivot_col);
+        pivot_row += 1;
+        pivot_col += 1;
+    }
+    if pivot_col < n_cols {
+        for j in pivot_col..n_cols {
+            free_vars.push(j);
+        }
+    }  
+    m.mod_inplace(mod_val);
+
+    (pivot_cols, free_vars, rank)
+}
+
+pub fn matrix_inverse(
+    m: &mut Matrix,
+    mod_val: &Integer,
+) -> Result<Matrix, i32> {
+    assert_eq!(m.rows, m.cols);
+    let n = m.rows;
+    let mut m_inv = Matrix::get_identity(n);
+    let mut m_aug = concatenate_col(m, &m_inv);
+    let (_pivot_cols, _free_vars, r) = echelon_form(&mut m_aug, mod_val);
+    
+    if r != -1 {
+        for i in 0..n {
+            for j in 0..n {
+                m_inv.set(i, j, m_aug.get(i, j + n));
+            }
+        }
+    }
+    
+    match r {
+        -1 => Err(-1),
+        _ => Ok(m_inv)
+    }
+}
+
 pub fn generate_right_inverse_space(
     row: usize,
     col: usize,
     modulus: &Integer,
     rng: &mut RandState<'_>,
 ) -> (Matrix, Matrix, Matrix) {
-    // variables for randomness
-    let d = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("Duration since UNIX_EPOCH failed")
-        .as_secs();
-    rng.seed(&Integer::from(d));
+    // u, u_inv are col x col unimodular matrices
+    // r,r_inv are row x row random matrices
+    // d is a row x col diagonal matrix
+    // d_inv is a col x row diagonal matrix
+    // n is a concatenation of a row x row zero matrix and a (col - row) x row random matrix
+    // define
+    //  a = r * d * u
+    //  a_inv = u_inv * d_inv * r_inv
+    //  null = u_inv * n
 
     let mod_half: Integer = modulus.clone() / 2;
-
-    // TODO: remove unimodular and change this to random matrix
     let (mut u, mut u_inv) = sample_unimodular_matrix_from_perm(col, col * 128);
     u %= modulus;
     u_inv %= modulus;
@@ -685,12 +798,35 @@ pub fn generate_right_inverse_space(
     let mut a_inv = u_inv.clone() * d_inv;
     a_inv %= modulus;
 
-    let n_upper = Matrix::new(row, row);
-    let n_lower = Matrix::random(col - row, row, modulus, rng);
+    let n_upper = Matrix::new(row, col - row);
+    let n_lower = Matrix::random(col - row, col - row, modulus, rng);
     let n = concatenate_row(&n_upper, &n_lower);
-
     let mut null = u_inv * n;
     null %= modulus;
+
+    // add more randomness!
+    // let mut r: Matrix;
+    // let r_inv: Matrix;
+    // loop {
+    //     r = Matrix::random(row, row, modulus, rng);
+    //     match matrix_inverse(&mut r, modulus) {
+    //         Ok(r_inv_tmp) => {
+    //             r_inv = r_inv_tmp;
+    //             break;
+    //         }
+    //         Err(_) => continue,
+    //     }
+    // }
+
+    // let r2 = Matrix::random(col - row, col - row, modulus, rng);
+
+    // a = r * a;
+    // a %= modulus;
+    // a_inv = a_inv * r_inv.clone();
+    // a_inv %= modulus;
+    // null = null * r2;
+    // null %= modulus;
+
 
     (a, a_inv, null)
 }

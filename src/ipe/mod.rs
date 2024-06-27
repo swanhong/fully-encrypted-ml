@@ -8,7 +8,7 @@ mod tests {
     use rug::Integer;
     use rug::rand::RandState;
     use crate::ipe::scheme::{ipe_setup, ipe_keygen, ipe_enc, ipe_enc_matrix_expression, ipe_dec};
-    use crate::util::vector::{gen_random_vector, vec_mod};
+    use crate::util::vector::{gen_random_vector, vec_mod, int_mod};
     use std::time::SystemTime;
     
     #[test]
@@ -21,9 +21,9 @@ mod tests {
         
         let grp = Group::new(100); // Initialize the group        
         
-        let dim = 3;
+        let dim = 10;
         let q = 2 * dim + 1;
-        let bound = 10;
+        let bound = 1024;
         // Generate random inputs for sk and y
         let mut x = gen_random_vector(dim, &Integer::from(2 * bound), &mut rand);
         let mut y = gen_random_vector(dim, &Integer::from(2 * bound), &mut rand);
@@ -91,7 +91,12 @@ mod tests {
         println!("out eval  : {}", out);
         println!("out plain : {}", out2);
 
-        assert_eq!(out, out2);
+        let out_mod = int_mod(&out, &grp.n);
+        println!("eval mod n: {}", out_mod);
+        let out2_mod = int_mod(&out2, &grp.n);
+        println!("plain mod n: {}", out2_mod);
+
+        assert_eq!(out_mod, out2_mod);
 
     }
     

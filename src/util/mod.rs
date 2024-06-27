@@ -59,7 +59,7 @@ mod tests {
     #[test]
     fn test_generate_matrix_with_right_inverse() {
         let row = 3;
-        let col = 4;
+        let col = 5;
         let modulus = Integer::from(7);
 
         let mut rand = RandState::new(); // Create a single RandState object

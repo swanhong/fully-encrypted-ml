@@ -2,96 +2,8 @@
 
 use rug::Integer;
 use rug::rand::RandState;
-use crate::util::matrix::{Matrix, concatenate_diag_one, concatenate_col};
+use crate::util::matrix::{Matrix, concatenate_diag_one, matrix_inverse};
 use crate::util::vector::int_mod;
-
-pub fn echelon_form(
-    m: &mut Matrix,
-    mod_val: &Integer,
-) -> (Vec<usize>, Vec<usize>, i32) {
-    let n_rows = m.rows();
-    let n_cols = m.cols();
-
-    let mut pivot_cols: Vec<usize> = Vec::new();
-    let mut free_vars: Vec<usize> = Vec::new();
-    let mut rank = -1;
-    let mut pivot_row = 0;
-    let mut pivot_col = 0;
-
-    while pivot_row < n_rows && pivot_col < n_cols {
-        let mut pivot = m.get(pivot_row, pivot_col);
-        
-        while pivot == 0 {
-            // if pivot_col < n_cols - 1 {
-            //     free_vars.push(pivot_col);
-            //     pivot_col += 1;
-            // } else {
-            //     free_vars.push(pivot_col);
-            //     pivot_row += 1;
-            //     pivot_col = 0;
-            // }
-            pivot_row += 1;
-
-            if pivot_row >= n_rows {
-                return (pivot_cols, free_vars, -1);
-            }
-
-            pivot = m.get(pivot_row, pivot_col);
-        }
-
-        rank += 1;
-        let pivot = m.get(pivot_row, pivot_col);
-        let pivot_inv = match pivot.clone().invert(&mod_val) {
-            Ok(x) => x,
-            Err(_e) => Integer::from(-1)
-        };
-
-        if pivot_inv != Integer::from(-1) {
-            for j in pivot_col..n_cols {
-                let val = m.get(pivot_row, j) * &pivot_inv % mod_val;
-                m.set(pivot_row, j, val);
-            }
-        } else {
-            return (pivot_cols, free_vars, -1);
-        }
-
-        for i in 0..n_rows {
-            let pivot = m.get(pivot_row, pivot_col);
-            let ratio: Integer;
-            let pivot_inv = match pivot.clone().invert(&mod_val) {
-                Ok(x) => x,
-                Err(_e) => Integer::from(-1)
-            };
-            if pivot_inv != Integer::from(-1) {
-                let val1 = m.get(i, pivot_col);
-                ratio = val1 * pivot_inv % mod_val;
-            } else {
-                return (pivot_cols, free_vars, -1);
-            }
-
-            for j in 0..n_cols {
-                if i != pivot_row {
-                    let val = m.get(pivot_row, j) * ratio.clone();
-                    let mut entry = m.get(i, j);
-                    entry = (entry - val) % mod_val;
-                    m.set(i, j, entry);
-                }
-            }
-        }
-
-        pivot_cols.push(pivot_col);
-        pivot_row += 1;
-        pivot_col += 1;
-    }
-    if pivot_col < n_cols {
-        for j in pivot_col..n_cols {
-            free_vars.push(j);
-        }
-    }  
-    m.mod_inplace(mod_val);
-
-    (pivot_cols, free_vars, rank)
-}
 
 pub fn row_reduce_form(m: &mut Matrix, mod_val: &Integer) -> (Matrix, i32) {
     let n_rows = m.rows();
@@ -231,31 +143,6 @@ pub fn row_reduce_form_integer(m: &mut Matrix) -> (Matrix, i32) {
     }
 
     (row_ops_matrix, rank)
-}
-
-
-pub fn matrix_inverse(
-    m: &mut Matrix,
-    mod_val: &Integer,
-) -> Result<Matrix, i32> {
-    assert_eq!(m.rows, m.cols);
-    let n = m.rows;
-    let mut m_inv = Matrix::get_identity(n);
-    let mut m_aug = concatenate_col(m, &m_inv);
-    let (_pivot_cols, _free_vars, r) = echelon_form(&mut m_aug, mod_val);
-    
-    if r != -1 {
-        for i in 0..n {
-            for j in 0..n {
-                m_inv.set(i, j, m_aug.get(i, j + n));
-            }
-        }
-    }
-    
-    match r {
-        -1 => Err(-1),
-        _ => Ok(m_inv)
-    }
 }
 
 pub fn sample_h(dim: usize, k: usize, modulo: &Integer, rng: &mut RandState<'_>) -> (Matrix, Matrix) {
