@@ -20,7 +20,7 @@ pub fn protocol_setup(
     rng: &mut RandState<'_>,
 ) -> ((Vec<Integer>, Vec<Integer>), QeSk, Vec<QeSk>, QeSk) {
     let dim = dim_vec[0];
-    let (dcr_sk, dcr_pk) = dcr_setup(dim + dim + 1, sk_bound, grp, rng);
+    let (dcr_sk, dcr_pk) = dcr_setup(2 * dim + 1, sk_bound, grp, rng);
     let qe_sk_init = qe_setup(grp, dim + k, dim + k, 2 * (dim + k) + 1, rng);
     let mut qe_sk_fcn = Vec::with_capacity(f_num);
     for i in 1..dim_vec.len()-1 {

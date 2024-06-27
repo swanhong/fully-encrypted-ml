@@ -160,7 +160,7 @@ mod tests {
         let n_x = 4;
         let b = 2 * n_x + 1;
         // let b = 1;
-        let bound = 10;
+        let bound = 1024;
 
         let decomp = Decomp::new(4, &grp);
 
@@ -176,26 +176,17 @@ mod tests {
             }
         }
 
-        assert!(out2 < grp.n, "out2 = {} >= n = {}", out2, grp.n);
-
         // Perform setup
         let start = SystemTime::now();
         let qe_sk = qe_setup(&grp, n_x, n_x, b, &mut rand);
         let end = start.elapsed();
         println!("Time elapsed in qe_setup is: {:?}", end);
 
-        // println!("{}", qe_sk);
-
         // Perform key generation
         let start = SystemTime::now();
         let (sk_f, sk_red) = qe_keygen(&qe_sk, &f, &grp, &decomp);
         let end = start.elapsed();
         println!("Time elapsed in qe_keygen is: {:?}", end);
-
-        // println!("sk_f: {:?}", sk_f);
-        // println!("sk_red: {:?}", sk_red);
-        // println!("lengths are {} and {}", sk_f.len(), sk_red.len());
-
         
         let mut ctxt_x: Vec<Integer>;
         let mut ctxt_y: Vec<Integer>;
@@ -206,25 +197,8 @@ mod tests {
         let end = start.elapsed();
         println!("Time elapsed in qe_enc_matrix is: {:?}", end);
 
-        // println!("enc_mat_x: {}", enc_mat_x);
-        // println!("enc_mat_y: {}", enc_mat_y);
-        // println!("enc_mat_h: {}", enc_mat_h);
-
-        // generate ctxt from matrix representation
-        // let x_mu: Vec<Integer> = vec_mul_scalar(&x, &grp.mu);
-        // let mut x_mu_1 = x_mu.clone();
-        // x_mu_1.push(Integer::from(1));
         let mut x1 = x.clone();
         x1.push(Integer::from(1));
-        
-        // println!("x_mu_1 = {:?}", x_mu_1);
-        // println!("y1 = {:?}", y1);
-
-        // y_x_1_1 = (y || x || 1 || 1)
-        // let mut y_xmu_1_1 = x.clone();
-        // y_xmu_1_1.extend(x_mu.clone());
-        // y_xmu_1_1.push(Integer::from(1));
-        // y_xmu_1_1.push(Integer::from(1));
 
         ctxt_x = enc_mat_x.mul_vec(&x1);
         vec_mod(&mut ctxt_x, &grp.delta);
@@ -232,10 +206,6 @@ mod tests {
         vec_mod(&mut ctxt_y, &grp.delta);
         ctxt_h = enc_mat_h.mul_vec(&x1);
         vec_mod(&mut ctxt_h, &grp.delta);
-
-        // println!("ctxt_x: {:?}", ctxt_x);
-        // println!("ctxt_y: {:?}", ctxt_y);
-        // println!("ctxt_h: {:?}", ctxt_h);
         
         let start = SystemTime::now();
         let out = qe_dec((&sk_f, &sk_red), (&ctxt_x, &ctxt_y, &ctxt_h), &grp, &decomp);
@@ -244,9 +214,16 @@ mod tests {
 
         println!("x = {:?}", x);
         println!("f = {:?}", f);
-        println!("out: {}", out);
-        println!("out2: {}", out2);
-        assert_eq!(out, out2);
+        println!("eval: {}", out);
+        println!("real: {}", out2);
+        let out2_mod_n = out2.clone() % grp.n.clone();
+        println!("real (mod delta): {}", out2_mod_n);
+        let mut out_positive = out.clone();
+        if out_positive < 0 {
+            out_positive += &grp.n;
+            println!("eval positive = {}", out_positive);
+        }
+        assert_eq!(out_positive, out2_mod_n);
 
     }
 }

@@ -20,9 +20,9 @@ pub fn ipe_keygen(sk: &IpeSk, y: &Vec<Integer>, grp: &Group) -> Vec<Integer> {
     let mut val;
     let mod_val = grp.delta.clone();
     
+    // U_t_y = (-1 * sk->U_t * y) || y
     let mut u_t_y_left = Vec::with_capacity(sk.u_t.rows);
     let mut u_t_y = Vec::with_capacity(u_t_y_left.len() + y.len());
-    // U_t_y = (-1 * sk->U_t * y) || y
     for i in 0..sk.u_t.rows {
         val = Integer::from(0);
         for j in 0..sk.u_t.cols {
@@ -32,9 +32,11 @@ pub fn ipe_keygen(sk: &IpeSk, y: &Vec<Integer>, grp: &Group) -> Vec<Integer> {
         u_t_y_left.push(val);
     }
 
+    // u_t_y <- u_t_y || y
     u_t_y.extend_from_slice(&u_t_y_left);
     u_t_y.extend_from_slice(y);
 
+    // sk_f_mat = u_t_y * D
     // sk_f_mat = (sk->D_inv_left + sk->D_inv_right * sk->U) * u_t_y
     let mut left = Matrix::new(1, u_t_y.len());
     for i in 0..u_t_y.len() {
@@ -46,6 +48,10 @@ pub fn ipe_keygen(sk: &IpeSk, y: &Vec<Integer>, grp: &Group) -> Vec<Integer> {
     sk_f_mat.mod_inplace(&mod_val);
     let sk_f = vec_exp_with_base(&grp.g, &sk_f_mat.get_row(0), &grp.n_sq);
     
+    // size of sk_f = dim + 2
+    println!("input dim = {}", y.len());
+    println!("sk.d size = {} x {}", sk.d.rows, sk.d.cols);
+    println!("Size of sk_f: {}", sk_f.len());
     sk_f
 }
 
@@ -59,7 +65,7 @@ pub fn ipe_enc(
     let mod_val = grp.delta.clone();
     let r_pr = mod_val.clone().random_below(rng);
     // r = 2 * N * r'
-    let r = &grp.n.clone() * Integer::from(2) * r_pr.clone();
+    let r: Integer = &grp.n.clone() * Integer::from(2) * r_pr.clone();
 
     // d_perp_rand = D_perp * rand
     let rand: Vec<Integer> = gen_random_vector(sk.d_perp.cols, &mod_val, rng);

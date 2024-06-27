@@ -655,10 +655,10 @@ pub fn generate_right_inverse_space(
 
     let mod_half: Integer = modulus.clone() / 2;
 
+    // TODO: remove unimodular and change this to random matrix
     let (mut u, mut u_inv) = sample_unimodular_matrix_from_perm(col, col * 128);
     u %= modulus;
     u_inv %= modulus;
-
 
     let mut d = Matrix::new(row, col);
     let mut d_inv = Matrix::new(col, row);

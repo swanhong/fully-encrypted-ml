@@ -37,11 +37,14 @@ impl IpeSk {
 
         let u = Matrix::random(dim, 2, &grp.delta, rng);
         let u_t = u.transpose();
+        // D = random matrix of size (dim + 2) x (dim + 2 + q)
+        // D_inv = right inverse of D, size (dim + 2 + q) x (dim + 2)
+        // D_perp = null space basis of D, size (dim + 2 + q) x (dim + 2)
         let (d, d_inv, d_perp) = generate_right_inverse_space(dim + 2, dim + 2 + q, &grp.delta, rng);
-        println!("d size = ({}, {})", d.rows, d.cols);
-        println!("d_inv size = ({}, {})", d_inv.rows, d_inv.cols);
-        println!("d_perp size = ({}, {})", d_perp.rows, d_perp.cols);
-        println!("remark: dim = {}, q = {}", dim, q);
+        println!("input dim = {}, q = {}", dim, q);
+        println!("d size = {} x {}", d.rows, d.cols);
+        println!("d_inv size = {} x {}", d_inv.rows, d_inv.cols);
+        println!("d_perp size = {} x {}", d_perp.rows, d_perp.cols);
         // sk1 = (D_inv_left + D_inv_right * U) * a
         let mut d_inv_left = Matrix::new(d_inv.rows, 2);
         let mut sk_enc = Matrix::new(d_inv.rows, dim);
