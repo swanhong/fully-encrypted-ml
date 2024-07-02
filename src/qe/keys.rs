@@ -5,6 +5,8 @@ use crate::util::{group::Group, matrix::*};
 use crate::ipe::keys::IpeSk;
 
 pub struct QeSk {
+    pub dim: usize,
+    pub q: usize,
     pub v: Matrix,
     pub w: Matrix,
     pub m: Matrix,
@@ -40,6 +42,8 @@ impl QeSk {
         let ipe_sk = IpeSk::new(4 * dim, q, &grp, rng);
 
         QeSk {
+            dim,
+            q,
             v,
             w,
             m,
@@ -59,6 +63,8 @@ use std::fmt;
 impl fmt::Display for QeSk {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "QeSk:")?;
+        writeln!(f, "dim: {}", self.dim)?;
+        writeln!(f, "q: {}", self.q)?;
         writeln!(f, "v: \n{}", self.v)?;
         writeln!(f, "w: \n{}", self.w)?;
         writeln!(f, "m: \n{}", self.m)?;

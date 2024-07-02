@@ -190,6 +190,48 @@ pub fn sample_h(dim: usize, k: usize, modulo: &Integer, rng: &mut RandState<'_>)
     (h, h_pr)
 }
 
+
+pub fn sample_h_wo_padding(dim: usize, k: usize, modulo: &Integer, rng: &mut RandState<'_>) -> (Matrix, Matrix) {
+    // sample two matrices h_left_1 and h_right_1
+    
+    // h_left is dim * (dim + k ) ternary matrix
+    // h_right is (dim + k) * dim matrix satisfying h_left * h_right = identity_dim
+
+    // h_right = h^t * (h * h^t)^-1 
+    // h_left_1 = (h_left, 1)
+    // h_right_1 = (h_right, 1)
+
+    let mut h_0: Matrix; // dim * (dim + k)
+    let mut h_t: Matrix; // (dim + k) * dim
+    let h_0_inv: Matrix; // dim * dim
+    let h_pr_0: Matrix; // (dim + k) * dim
+
+    loop {
+        // sample h_0 from {-1, 0, 1}^{dim * (dim+k)}
+        h_0 = Matrix::random(dim, dim + k, &Integer::from(3), rng);
+        h_0.add_int_inplace(&Integer::from(-1));
+        // h_0.mod_inplace(modulo);
+
+        h_t = h_0.transpose();
+        let mut tmp = h_0.clone() * h_t.clone();
+        tmp.mod_inplace(modulo);
+        match matrix_inverse(&mut tmp, modulo) {
+            Ok(m_inv) => {
+                h_0_inv = m_inv.clone();
+                break;
+            }
+            Err(_rank) => {
+                continue;
+            }
+        }
+
+    }
+    
+    h_pr_0 = h_t * h_0_inv;
+
+    (h_0, h_pr_0)
+}
+
 pub fn sample_gamma(
     dim: usize,
     k: usize,
@@ -232,6 +274,48 @@ pub fn sample_gamma(
     let gamma_pr_1 = concatenate_diag_one(&gamma_pr_0);
 
     (gamma_1, gamma_pr_1)
+}
+
+
+pub fn sample_gamma_wo_padding(
+    dim: usize,
+    k: usize,
+    modulo: &Integer,
+    rng: &mut RandState<'_>,
+) -> (Matrix, Matrix) {
+    // sample two matrices gamma_left_1 and gamma_right_1
+    
+    // gamma_left is dim * (dim + k ) binary matrix
+    // gamma_right is (dim + k) * dim matrix satisfying gamma_left * gamma_right = identity_dim
+
+    // gamma_right = gamma^t * (gamma * gamma^t)^-1 
+    // gamma_left_1 = (gamma_left, 1)
+    // gamma_right_1 = (gamma_right, 1)
+    let mut gamma_0: Matrix;
+    let mut gamma_0_t: Matrix;
+    let gamma_0_inv: Matrix;
+
+    loop {
+        gamma_0 = Matrix::random( dim, dim + k, &Integer::from(2), rng);
+        gamma_0_t = gamma_0.transpose();
+        let mut tmp = gamma_0.clone() * gamma_0_t.clone();
+        tmp.mod_inplace(modulo);
+        match matrix_inverse(&mut tmp, modulo) {
+            Ok(m_inv) => {
+                gamma_0_inv = m_inv.clone();
+                break;
+            }
+            Err(_rank) => {
+                continue;
+            }
+        }
+    }
+    
+
+    let mut gamma_pr_0 = gamma_0_t * gamma_0_inv;
+    gamma_pr_0.mod_inplace(modulo);
+
+    (gamma_0, gamma_pr_0)
 }
 
 use rug::ops::Pow;

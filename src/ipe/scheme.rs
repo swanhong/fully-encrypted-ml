@@ -48,10 +48,7 @@ pub fn ipe_keygen(sk: &IpeSk, y: &Vec<Integer>, grp: &Group) -> Vec<Integer> {
     sk_f_mat.mod_inplace(&mod_val);
     let sk_f = vec_exp_with_base(&grp.g, &sk_f_mat.get_row(0), &grp.n_sq);
     
-    // size of sk_f = dim + 2
-    println!("input dim = {}", y.len());
-    println!("sk.d size = {} x {}", sk.d.rows, sk.d.cols);
-    println!("Size of sk_f: {}", sk_f.len());
+    // size of sk_f = dim + 2 + q
     sk_f
 }
 

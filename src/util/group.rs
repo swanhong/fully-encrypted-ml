@@ -13,7 +13,6 @@ pub struct Group {
     pub mu: Integer,
     pub phi_n: Integer,
     pub delta: Integer,
-    // ... other fields
 }
 
 impl Group {
@@ -68,6 +67,23 @@ impl Group {
             phi_n,
             delta,
             // ... initialize other fields
+        }
+    }
+}
+
+// implement Group clone
+impl Clone for Group {
+    fn clone(&self) -> Group {
+        Group {
+            n: self.n.clone(),
+            p: self.p.clone(),
+            q: self.q.clone(),
+            n_sq: self.n_sq.clone(),
+            n_root: self.n_root.clone(),
+            g: self.g.clone(),
+            mu: self.mu.clone(),
+            phi_n: self.phi_n.clone(),
+            delta: self.delta.clone(),
         }
     }
 }

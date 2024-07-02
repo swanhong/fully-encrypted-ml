@@ -6,8 +6,8 @@ mod test {
     use rug::Integer;
     use rug::rand::RandState;
     use std::time::SystemTime;
-    use crate::protocol::algorithm::{row_reduce_form, row_reduce_form_integer};
-    use crate::protocol::scheme::{protocol_setup, protocol_keygen_switch, protocol_enc_init, protocol_keyswitch, protocol_keygen_i, protocol_dec_i, protocol_keygen_end, protocol_dec_end};
+    use crate::protocol::algorithm::{row_reduce_form, row_reduce_form_integer, sample_gamma_wo_padding, sample_h_wo_padding};
+    use crate::protocol::scheme::*;
     use crate::util::group::Group;
 
     use crate::util::matrix::{Matrix, eval_quadratic_multivariate};
@@ -28,16 +28,15 @@ mod test {
         let bit_len = 100;
         let grp = Group::new(bit_len); // Initialize the group   
         println!("!!! WARNING !!! bit len for primes = {}: this is not secure !!!", bit_len);     
-        // println!("{}", grp);
         
         let dim = 5;
         let k = 1;
+        let q = 2 * dim + 1;
         let f_num = dim;
-        // let b = 1;
         let bound = 10;
         let sk_bound = Integer::from(10);
 
-        let decomp = Decomp::new(4, &grp);
+        let decomp = Decomp::new(3, &grp);
         // println!("decomp = {}", decomp);
         let x = gen_random_vector(dim, &Integer::from(bound), &mut rng);
         let mut f_mat = Matrix::new(f_num, dim * dim);
@@ -134,6 +133,8 @@ mod test {
             (&qe_b_x, &qe_b_y, &qe_b_h),
             (&sk_f_mat_x, &sk_f_mat_y, &sk_f_mat_h),
             (&sk_red_mat_x, &sk_red_mat_y, &sk_red_mat_h),
+            dim,
+            q,
             &decomp,
             &grp
         );
@@ -142,7 +143,7 @@ mod test {
 
         println!("start protocol_keygen_end");
         let start = SystemTime::now();
-        let (sk_f_mat, sk_f_red) = protocol_keygen_end(&qe_sk, &h_left, &f_mat, &decomp, &grp);
+        let (sk_f_mat, sk_f_red) = protocol_keygen_end(&qe_sk, &h_left, &f_mat, &grp);
         let end = start.elapsed();
         println!("Time elapsed in protocol_keygen_end is: {:?}", end);
 
@@ -152,6 +153,8 @@ mod test {
             (&ct_out_x2, &ct_out_y2, &ct_out_h2),
             (&sk_f_mat, &sk_f_red),
             &decomp,
+            dim,
+            q,
             &grp
         );
         let end = start.elapsed();
@@ -165,10 +168,167 @@ mod test {
 
         let mut ffx = eval_quadratic_multivariate(&fx, &fx, &f_mat);
         println!("f(f(x)) = {:?}", ffx);
-        println!("mod n = {:?}", grp.n);
         vec_mod(&mut ffx, &grp.n);
         println!("real mod n = {:?}", ffx);
+        println!("eval result: {:?}", val_end);
+    }
 
+    #[test]
+    fn test_protocol_start_to_end_new() {
+        println!("run test_protocol_start_to_end");
+
+        let mut rng = RandState::new(); // Create a single RandState object
+        let d = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .expect("Duration since UNIX_EPOCH failed");
+        rng.seed(&Integer::from(d.as_secs()));
+        
+        let bit_len = 100;
+        let grp = Group::new(bit_len); // Initialize the group   
+        println!("!!! WARNING !!! bit len for primes = {}: this is not secure !!!", bit_len);     
+        
+        let dim = 5;
+        let k = 1;
+        let q = 2 * dim + 1;
+        let f_num = dim;
+        let bound = 10;
+        let sk_bound = Integer::from(10);
+
+        let decomp = Decomp::new(3, &grp);
+        // println!("decomp = {}", decomp);
+        let x = gen_random_vector(dim, &Integer::from(bound), &mut rng);
+        let mut f_mat = Matrix::new(f_num, dim * dim);
+        for i in 0..f_num {
+            let f = gen_random_vector(dim, &Integer::from(bound), &mut rng);
+            let f_tensor = tensor_product_vecs(&f, &f, &grp.delta);
+            f_mat.set_row(i, &f_tensor);
+        }
+
+        // Perform setup
+        println!("start protocol_setup");
+        let start = SystemTime::now();
+        let ((dcr_sk, dcr_pk), 
+            qe_sk, 
+            _qe_sk_vec,
+            _qe_sk_end,
+        ) = protocol_setup(
+            vec![dim], 
+            f_num, 
+            k,
+            &sk_bound, 
+            &grp, 
+            &mut rng);
+
+        let (h0_left, h0_right) = sample_h_wo_padding(dim, k, &grp.delta, &mut rng);
+        println!("dim, k = {}, {}", dim, k);
+        println!("h0_left size = {} x {}", h0_left.rows, h0_left.cols);
+        println!("h0_right size = {} x {}", h0_right.rows, h0_right.cols);
+
+        let (h1_left, h1_right) = sample_h_wo_padding(dim, k, &grp.delta, &mut rng);
+        let (gamma_left, gamma_right) = sample_gamma_wo_padding(dim, dim, &grp.delta, &mut rng);
+        println!("gamma_left size = {} x {}", gamma_left.rows, gamma_left.cols);
+        println!("gamma_right size = {} x {}", gamma_right.rows, gamma_right.cols);
+        let end = start.elapsed();
+        println!("Time elapsed in protocol_setup is: {:?}", end);
+
+        println!("start protocol_keygen_dcr_to_qe");
+        let start = SystemTime::now();
+        let (mat_ctxts, fk)
+        = protocol_keygen_dcr_to_qe(
+            &dcr_sk, 
+            &qe_sk,
+            &h0_right, 
+            &gamma_left, 
+            dim + k, 
+            q,
+            &decomp, 
+            &grp, 
+            &mut rng);
+        let end = start.elapsed();
+        println!("Time elapsed in protocol_keygen_dcr_to_qe is: {:?}", end);
+
+        println!("start protocol_keygen_qe_to_qe");
+        let start = SystemTime::now();
+        let fk_qe_to_qe = protocol_keygen_qe_to_qe(
+            &qe_sk,
+            &qe_sk,
+            &h1_right,
+            &h0_left,
+            dim + k,
+            q,
+            k,
+            &f_mat,
+            &decomp,
+            &grp,
+            &mut rng
+        );
+        let end = start.elapsed();
+        println!("Time elapsed in protocol_keygen_qe_to_qe is: {:?}", end);
+
+        println!("start protocol_keygen_qe_to_plain");
+        let start = SystemTime::now();
+        let fk_qe_to_plain = protocol_keygen_qe_to_plain(
+            &qe_sk,
+            &h1_left,
+            &f_mat,
+            &grp
+        );
+
+
+        println!("start protocol_enc_init");
+        let start = SystemTime::now();
+        let ctxt_x = protocol_enc_init(&dcr_pk, &gamma_right, &x, &grp, &mut rng);
+        let end = start.elapsed();
+        println!("Time elapsed in protocol_enc_init is: {:?}", end);
+
+        println!("start protocol_dec_dcr_to_qe");
+        let start = SystemTime::now();
+        //  run keyswitch
+        let ct0 = protocol_dec_dcr_to_qe(
+            &ctxt_x, 
+            &mat_ctxts,
+            &fk,
+            &decomp,
+            &grp
+        );
+        let end = start.elapsed();
+        println!("Time elapsed in protocol_dec_dcr_to_qe is: {:?}", end);
+
+        println!("start protocol_dec_qe_to_qe");
+        let start = SystemTime::now();
+        let ct1 = protocol_dec_qe_to_qe(
+            &ct0,
+            &fk_qe_to_qe,
+            dim + k,
+            q,
+            &decomp,
+            &grp
+        );
+        let end = start.elapsed();
+        println!("Time elapsed in protocol_dec_qe_to_qe is: {:?}", end);
+
+        println!("start protocol_dec_qe_to_plain");
+        let start = SystemTime::now();
+        let val_end = protocol_dec_qe_to_plain(
+            &ct1,
+            &fk_qe_to_plain,
+            dim,
+            q,
+            &grp
+        );
+        let end = start.elapsed();
+        println!("Time elapsed in protocol_dec_qe_to_plain is: {:?}", end);
+
+        println!("reprint inputs");
+        println!("x: {:?}", x);
+        println!("f_mat: {:?}", f_mat);
+        let fx = eval_quadratic_multivariate(&x, &x, &f_mat);
+        println!("f(x) = {:?}", fx);
+
+        let mut ffx = eval_quadratic_multivariate(&fx, &fx, &f_mat);
+        println!("f(f(x)) = {:?}", ffx);
+        vec_mod(&mut ffx, &grp.n);
+        println!("real mod n = {:?}", ffx);
         println!("eval result: {:?}", val_end);
     }
 

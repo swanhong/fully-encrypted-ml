@@ -8,6 +8,7 @@ use crate::util::{group::Group, matrix::*};
 use crate::util::vector::vec_mod;
 
 pub struct IpeSk {
+    pub dim: usize,
     pub a: Vec<Integer>,
     pub u: Matrix,
     pub u_t: Matrix,
@@ -61,6 +62,7 @@ impl IpeSk {
         vec_mod(&mut sk1, &grp.delta);
         
         IpeSk {
+            dim,
             a,
             u,
             u_t,
