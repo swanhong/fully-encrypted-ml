@@ -2,7 +2,7 @@ extern crate rug;
 use rug::rand::RandState;
 
 use crate::util::{group::Group, matrix::*};
-use crate::ipfe::keys::IpeSk;
+use crate::ipfe::keys::IpfeSk;
 
 pub struct QfeSk {
     pub dim: usize,
@@ -16,7 +16,7 @@ pub struct QfeSk {
     pub d_x_inv: Matrix,
     pub d_y_null: Matrix,
     pub d_y_inv: Matrix,
-    pub ipe_sk: IpeSk,
+    pub ipe_sk: IpfeSk,
 }
 
 
@@ -39,7 +39,7 @@ impl QfeSk {
         let (d_x, d_x_inv, d_x_null) = generate_right_inverse_space(dim, dim + q, &modulo, rng);
         let (d_y, d_y_inv, d_y_null) = generate_right_inverse_space(dim, dim + q, &modulo, rng);
 
-        let ipe_sk = IpeSk::new(4 * dim, q, &grp, rng);
+        let ipe_sk = IpfeSk::new(4 * dim, q, &grp, rng);
 
         QfeSk {
             dim,
