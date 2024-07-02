@@ -7,7 +7,7 @@ use rug::rand::RandState;
 use crate::util::{group::Group, matrix::*};
 use crate::util::vector::vec_mod;
 
-pub struct IpeSk {
+pub struct IpfeSk {
     pub dim: usize,
     pub a: Vec<Integer>,
     pub u: Matrix,
@@ -19,8 +19,8 @@ pub struct IpeSk {
     pub sk_enc: Matrix,
 }
 
-impl IpeSk {
-    pub fn new(dim: usize, q: usize, grp: &Group, rng: &mut RandState<'_>) -> IpeSk {
+impl IpfeSk {
+    pub fn new(dim: usize, q: usize, grp: &Group, rng: &mut RandState<'_>) -> IpfeSk {
         // modulus = grp.delta
         // a = random vector of size 2 mod b
         // U = random matrix of size (dim) x 2
@@ -61,7 +61,7 @@ impl IpeSk {
         let mut sk1 = (d_inv_left + &(sk_enc.clone() * u.clone())).mul_vec(&a);
         vec_mod(&mut sk1, &grp.delta);
         
-        IpeSk {
+        IpfeSk {
             dim,
             a,
             u,
@@ -76,7 +76,7 @@ impl IpeSk {
 }
 
 use std::fmt;
-impl fmt::Display for IpeSk {
+impl fmt::Display for IpfeSk {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "a: {:?}", self.a)?;
         writeln!(f, "u: {:?}", self.u)?;

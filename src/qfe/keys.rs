@@ -2,9 +2,9 @@ extern crate rug;
 use rug::rand::RandState;
 
 use crate::util::{group::Group, matrix::*};
-use crate::ipe::keys::IpeSk;
+use crate::ipfe::keys::IpeSk;
 
-pub struct QeSk {
+pub struct QfeSk {
     pub dim: usize,
     pub q: usize,
     pub v: Matrix,
@@ -20,8 +20,8 @@ pub struct QeSk {
 }
 
 
-impl QeSk {
-    pub fn new(grp: &Group, dim: usize, q: usize, rng: &mut RandState<'_>) -> QeSk {
+impl QfeSk {
+    pub fn new(grp: &Group, dim: usize, q: usize, rng: &mut RandState<'_>) -> QfeSk {
         let modulo = grp.delta.clone();
         
         let v = Matrix::random(dim, 2, &modulo, rng);
@@ -41,7 +41,7 @@ impl QeSk {
 
         let ipe_sk = IpeSk::new(4 * dim, q, &grp, rng);
 
-        QeSk {
+        QfeSk {
             dim,
             q,
             v,
@@ -60,9 +60,9 @@ impl QeSk {
 
 use std::fmt;
 
-impl fmt::Display for QeSk {
+impl fmt::Display for QfeSk {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "QeSk:")?;
+        writeln!(f, "QfeSk:")?;
         writeln!(f, "dim: {}", self.dim)?;
         writeln!(f, "q: {}", self.q)?;
         writeln!(f, "v: \n{}", self.v)?;

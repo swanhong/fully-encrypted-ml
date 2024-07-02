@@ -2,9 +2,9 @@ extern crate rug;
 
 mod util;
 mod parse;
-mod dcr_ipe;
-mod ipe;
-mod qe;
+mod dcr;
+mod ipfe;
+mod qfe;
 mod protocol;
 mod test;
 

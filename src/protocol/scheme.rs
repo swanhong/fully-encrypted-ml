@@ -2,16 +2,16 @@ extern crate rug;
 use rug::Integer;
 use rug::rand::RandState;
 
-use crate::qe;
+use crate::qfe;
 use crate::util::group::Group;
 use crate::util::matrix::{Matrix, remove_diag_one};
 use crate::util::vector;
 use crate::util::vector::{gen_random_vector, vec_add, vec_mod, vec_mul_scalar};
 use crate::util::decomp::Decomp;
-use crate::dcr_ipe::scheme::{dcr_setup, dcr_enc, dcr_keygen, dcr_dec};
-use crate::qe::keys::QeSk;
-use crate::qe::scheme::{divide_vector_for_functional_key, get_funcional_key_len, qe_dec, qe_enc_matrix_same_xy, qe_keygen, qe_setup};
-use crate::ipe::scheme::{ipe_enc, ipe_keygen};
+use crate::dcr::scheme::{dcr_setup, dcr_enc, dcr_keygen, dcr_dec};
+use crate::qfe::keys::QfeSk;
+use crate::qfe::scheme::{divide_vector_for_functional_key, get_funcional_key_len, qe_dec, qe_enc_matrix_same_xy, qe_keygen, qe_setup};
+use crate::ipfe::scheme::{ipe_enc, ipe_keygen};
 use std::time::SystemTime;
 
 pub fn protocol_setup(
@@ -21,7 +21,7 @@ pub fn protocol_setup(
     sk_bound: &Integer,
     grp: &Group,
     rng: &mut RandState<'_>,
-) -> ((Vec<Integer>, Vec<Integer>), QeSk, Vec<QeSk>, QeSk) {
+) -> ((Vec<Integer>, Vec<Integer>), QfeSk, Vec<QfeSk>, QfeSk) {
     let dim = dim_vec[0];
     let (dcr_sk, dcr_pk) = dcr_setup(2 * dim + 1, sk_bound, grp, rng);
     let qe_sk_init = qe_setup(grp, dim + k, 2 * (dim + k) + 1, rng);
@@ -52,7 +52,7 @@ pub fn protocol_enc_init(
 }
 
 pub fn protocol_keygen_switch(
-    qe_sk: &QeSk,
+    qe_sk: &QfeSk,
     dcr_sk: &Vec<Integer>,
     h_right: &Matrix,
     gamma_left: &Matrix,
@@ -162,8 +162,8 @@ pub fn protocol_keyswitch(
 }
 
 pub fn protocol_keygen_i(
-    qe_sk_enc: &QeSk,
-    qe_sk_keygen: &QeSk,
+    qe_sk_enc: &QfeSk,
+    qe_sk_keygen: &QfeSk,
     h_right: &Matrix,
     hm_left: &Matrix,
     dim: usize,
@@ -237,7 +237,7 @@ pub fn protocol_keygen_i(
         &qe_enc_mat_h, &h_right_origin, &f, &hmhm, &decomp, &grp);
     
     fn gen_f_and_red(
-        qe_sk: &QeSk,
+        qe_sk: &QfeSk,
         total_mat: Matrix,
         grp: &Group,
     ) -> (Matrix, Matrix) {
@@ -349,7 +349,7 @@ pub fn protocol_dec_i(
 }
 
 pub fn protocol_keygen_end(
-    qe_sk: &QeSk,
+    qe_sk: &QfeSk,
     hm_left: &Matrix,
     f: &Matrix,
     grp: &Group,
@@ -419,7 +419,7 @@ pub fn protocol_dec_end(
 }
 
 pub fn composite_enc_and_f(
-    qe_sk: &QeSk,
+    qe_sk: &QfeSk,
     f: &Matrix,
     dim: usize,
     q: usize,
@@ -507,7 +507,7 @@ pub fn composite_enc_and_f(
 
 pub fn protocol_keygen_dcr_to_qe(
     dcr_sk: &Vec<Integer>,
-    qe_sk: &QeSk,
+    qe_sk: &QfeSk,
     h_right: &Matrix,
     gamma_left: &Matrix,
     dim: usize,
@@ -536,8 +536,8 @@ pub fn protocol_keygen_dcr_to_qe(
 }
 
 pub fn protocol_keygen_qe_to_qe(
-    qe_sk_enc: &QeSk,
-    qe_sk_keygen: &QeSk,
+    qe_sk_enc: &QfeSk,
+    qe_sk_keygen: &QfeSk,
     h_right: &Matrix,
     hm_left: &Matrix,
     dim: usize,
@@ -575,7 +575,7 @@ pub fn protocol_keygen_qe_to_qe(
 }
 
 pub fn protocol_keygen_qe_to_plain(
-    qe_sk: &QeSk,
+    qe_sk: &QfeSk,
     hm_left: &Matrix,
     f: &Matrix,
     grp: &Group,

@@ -7,7 +7,7 @@ mod tests {
 
     use rug::Integer;
     use rug::rand::RandState;
-    use crate::ipe::scheme::{ipe_setup, ipe_keygen, ipe_enc, ipe_enc_matrix_expression, ipe_dec};
+    use crate::ipfe::scheme::{ipe_setup, ipe_keygen, ipe_enc, ipe_enc_matrix_expression, ipe_dec};
     use crate::util::vector::{gen_random_vector, vec_mod, int_mod};
     use std::time::SystemTime;
     

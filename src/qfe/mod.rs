@@ -8,7 +8,7 @@ mod tests {
     use rug::Integer;
     use rug::rand::RandState;
     use std::time::{Duration, SystemTime};
-    use crate::qe::scheme::{qe_setup, qe_keygen, qe_enc, qe_enc_matrix_same_xy, qe_dec, qe_enc_matrix_expression};
+    use crate::qfe::scheme::{qe_setup, qe_keygen, qe_enc, qe_enc_matrix_same_xy, qe_dec, qe_enc_matrix_expression};
     use crate::util::vector::{gen_random_vector, gen_random_vector_signed, vec_mod, vec_mul_scalar, int_mod};
 
     #[test]

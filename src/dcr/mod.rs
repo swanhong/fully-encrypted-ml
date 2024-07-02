@@ -4,12 +4,12 @@ pub mod scheme;
 mod test {
     use crate::rug::Integer;
     use crate::util::group::Group;
-    use crate::dcr_ipe::scheme::{dcr_setup, dcr_keygen, dcr_enc, dcr_dec};
+    use crate::dcr::scheme::{dcr_setup, dcr_keygen, dcr_enc, dcr_dec};
     use std::time::{Instant, SystemTime};
 
     #[test]
-    pub fn test_dcr_ipe_start_to_end() {
-    println!(" == start test_dcr_ipe_start_to_end ==");
+    pub fn test_dcr_start_to_end() {
+    println!(" == start test_dcr_start_to_end ==");
     
     let bit_len = 10;
     let dim: usize = 10;

@@ -1,4 +1,3 @@
-// dcr_ipe.rs
 extern crate rug;
 use rug::Integer;
 use rug::rand::RandState;

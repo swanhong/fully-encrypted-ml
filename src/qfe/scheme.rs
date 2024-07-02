@@ -9,15 +9,15 @@ use crate::util::group::Group;
 use crate::util::group::discrete_logarithm;
 use crate::util::matrix::*;
 use crate::util::vector::*;
-use crate::ipe::scheme::{ipe_keygen, ipe_enc, ipe_enc_matrix_expression, ipe_dec};
-use super::keys::QeSk;
+use crate::ipfe::scheme::{ipe_keygen, ipe_enc, ipe_enc_matrix_expression, ipe_dec};
+use super::keys::QfeSk;
 
-pub fn qe_setup(grp: &Group, dim: usize, q: usize, rng: &mut RandState<'_>) -> QeSk {
-    QeSk::new(grp, dim, q, rng)
+pub fn qe_setup(grp: &Group, dim: usize, q: usize, rng: &mut RandState<'_>) -> QfeSk {
+    QfeSk::new(grp, dim, q, rng)
 }
 
 pub fn qe_keygen(
-    sk: &QeSk,
+    sk: &QfeSk,
     f: &Vec<Integer>,
     grp: &Group,
 ) -> Vec<Integer> {
@@ -78,7 +78,7 @@ pub fn divide_vector_for_functional_key(
 }
 
 pub fn qe_enc(
-    sk: &QeSk,
+    sk: &QfeSk,
     x: &Vec<Integer>,
     grp: &Group,
     rng: &mut RandState<'_>,
@@ -236,7 +236,7 @@ fn gen_enc_matrix_for_x(
 
 
 fn compute_m_h_b_1(
-    qe_sk: &QeSk,
+    qe_sk: &QfeSk,
     n_x: usize,
     n_y: usize,
     r_x: &Vec<Integer>,
@@ -304,7 +304,7 @@ fn compute_m_h_b_1(
 }
 
 pub fn qe_enc_matrix_expression(
-    qe_sk: &QeSk,
+    qe_sk: &QfeSk,
     n_x: usize,
     n_y: usize,
     grp: &Group,
@@ -340,7 +340,7 @@ pub fn qe_enc_matrix_expression(
 }
 
 pub fn qe_enc_matrix_same_xy(
-    qe_sk: &QeSk,
+    qe_sk: &QfeSk,
     n_x: usize,
     grp: &Group,
     rng: &mut RandState<'_>,
