@@ -10,8 +10,8 @@ use crate::util::vector::{gen_random_vector, vec_add, vec_mod, vec_mul_scalar};
 use crate::util::decomp::Decomp;
 use crate::dcr::scheme::{dcr_setup, dcr_enc, dcr_keygen, dcr_dec};
 use crate::qfe::keys::QfeSk;
-use crate::qfe::scheme::{divide_vector_for_functional_key, get_funcional_key_len, qe_dec, qe_enc_matrix_same_xy, qe_keygen, qe_setup};
-use crate::ipfe::scheme::{ipe_enc, ipe_keygen};
+use crate::qfe::scheme::{divide_vector_for_functional_key, get_funcional_key_len, qfe_dec, qfe_enc_matrix_same_xy, qfe_keygen, qfe_setup};
+use crate::ipfe::scheme::{ipfe_enc, ipfe_keygen};
 use std::time::SystemTime;
 
 pub fn protocol_setup(
@@ -24,16 +24,16 @@ pub fn protocol_setup(
 ) -> ((Vec<Integer>, Vec<Integer>), QfeSk, Vec<QfeSk>, QfeSk) {
     let dim = dim_vec[0];
     let (dcr_sk, dcr_pk) = dcr_setup(2 * dim + 1, sk_bound, grp, rng);
-    let qe_sk_init = qe_setup(grp, dim + k, 2 * (dim + k) + 1, rng);
-    let mut qe_sk_fcn = Vec::with_capacity(f_num);
+    let qfe_sk_init = qfe_setup(grp, dim + k, 2 * (dim + k) + 1, rng);
+    let mut qfe_sk_fcn = Vec::with_capacity(f_num);
     for i in 1..dim_vec.len()-1 {
         let dim = dim_vec[i];
-        qe_sk_fcn.push(qe_setup(grp, dim + k, 2 * (dim + k) + 1, rng));
+        qfe_sk_fcn.push(qfe_setup(grp, dim + k, 2 * (dim + k) + 1, rng));
     }
     let dim = dim_vec[dim_vec.len()-1];
-    let qe_sk_end = qe_setup(grp, dim + k, 2 * (dim + k) + 1, rng);
+    let qfe_sk_end = qfe_setup(grp, dim + k, 2 * (dim + k) + 1, rng);
 
-    ((dcr_sk, dcr_pk), qe_sk_init, qe_sk_fcn, qe_sk_end)
+    ((dcr_sk, dcr_pk), qfe_sk_init, qfe_sk_fcn, qfe_sk_end)
 }
 
 pub fn protocol_enc_init(
@@ -52,7 +52,7 @@ pub fn protocol_enc_init(
 }
 
 pub fn protocol_keygen_switch(
-    qe_sk: &QfeSk,
+    qfe_sk: &QfeSk,
     dcr_sk: &Vec<Integer>,
     h_right: &Matrix,
     gamma_left: &Matrix,
@@ -66,18 +66,18 @@ pub fn protocol_keygen_switch(
     (Vec<Integer>, Vec<Integer>, Vec<Integer>),
 ) {
     let modulo = grp.delta.clone();
-    let (qe_enc_mat_x, qe_enc_mat_y, qe_enc_mat_h)
-        = qe_enc_matrix_same_xy(&qe_sk, dim + k, &grp, rng);
+    let (qfe_enc_mat_x, qfe_enc_mat_y, qfe_enc_mat_h)
+        = qfe_enc_matrix_same_xy(&qfe_sk, dim + k, &grp, rng);
     
     fn gen_switch_key_for_enc_and_dcr(
         dcr_sk: &Vec<Integer>,
-        qe_enc_mat: &Matrix,
+        qfe_enc_mat: &Matrix,
         h_right: &Matrix,
         gamma_left: &Matrix,
         decomp: &Decomp,
         modulo: &Integer,
     ) -> (Matrix, Vec<Integer>) {
-        let mut xh = qe_enc_mat * h_right;
+        let mut xh = qfe_enc_mat * h_right;
         xh.mod_inplace(modulo);
         let xh_decomp = decomp.matrix_col(&xh);
         let mut switch_key_x = xh_decomp * gamma_left;
@@ -95,7 +95,7 @@ pub fn protocol_keygen_switch(
     
     let (switch_key_x, switch_key_dcr_x) = gen_switch_key_for_enc_and_dcr(
         &dcr_sk,
-        &qe_enc_mat_x,
+        &qfe_enc_mat_x,
         &h_right,
         &gamma_left,
         &decomp,
@@ -104,7 +104,7 @@ pub fn protocol_keygen_switch(
 
     let (switch_key_y, switch_key_dcr_y) = gen_switch_key_for_enc_and_dcr(
         &dcr_sk,
-        &qe_enc_mat_y,
+        &qfe_enc_mat_y,
         &h_right,
         &gamma_left,
         &decomp,
@@ -113,7 +113,7 @@ pub fn protocol_keygen_switch(
 
     let (switch_key_h, switch_key_dcr_h) = gen_switch_key_for_enc_and_dcr(
         &dcr_sk,
-        &qe_enc_mat_h,
+        &qfe_enc_mat_h,
         &h_right,
         &gamma_left,
         &decomp,
@@ -162,8 +162,8 @@ pub fn protocol_keyswitch(
 }
 
 pub fn protocol_keygen_i(
-    qe_sk_enc: &QfeSk,
-    qe_sk_keygen: &QfeSk,
+    qfe_sk_enc: &QfeSk,
+    qfe_sk_keygen: &QfeSk,
     h_right: &Matrix,
     hm_left: &Matrix,
     dim: usize,
@@ -177,7 +177,7 @@ pub fn protocol_keygen_i(
     (Matrix, Matrix, Matrix), 
     (Matrix, Matrix, Matrix),
 ) {
-    let (qe_enc_mat_x, qe_enc_mat_y, qe_enc_mat_h) = qe_enc_matrix_same_xy(&qe_sk_enc, dim + k, &grp, rng);
+    let (qfe_enc_mat_x, qfe_enc_mat_y, qfe_enc_mat_h) = qfe_enc_matrix_same_xy(&qfe_sk_enc, dim + k, &grp, rng);
     
     // divide enc_mats into M * b
     pub fn divide_mat_into_m_b(
@@ -196,13 +196,13 @@ pub fn protocol_keygen_i(
         }
         (mat_left, vec_right)
     }
-    let (qe_enc_mat_x, qe_b_x) = divide_mat_into_m_b(&qe_enc_mat_x);
-    let (qe_enc_mat_y, qe_b_y) = divide_mat_into_m_b(&qe_enc_mat_y);
-    let (qe_enc_mat_h, qe_b_h) = divide_mat_into_m_b(&qe_enc_mat_h);
+    let (qfe_enc_mat_x, qfe_b_x) = divide_mat_into_m_b(&qfe_enc_mat_x);
+    let (qfe_enc_mat_y, qfe_b_y) = divide_mat_into_m_b(&qfe_enc_mat_y);
+    let (qfe_enc_mat_h, qfe_b_h) = divide_mat_into_m_b(&qfe_enc_mat_h);
 
-    let qe_b_x = decomp.vector(&qe_b_x);
-    let qe_b_y = decomp.vector(&qe_b_y);
-    let qe_b_h = decomp.vector(&qe_b_h);
+    let qfe_b_x = decomp.vector(&qfe_b_x);
+    let qfe_b_y = decomp.vector(&qfe_b_y);
+    let qfe_b_h = decomp.vector(&qfe_b_h);
 
     let h_right_origin = remove_diag_one(&h_right);
     let hm_left_origin = remove_diag_one(&hm_left);
@@ -230,25 +230,25 @@ pub fn protocol_keygen_i(
     }
 
     let total_mat_x = mat_mul_4(
-        &qe_enc_mat_x, &h_right_origin, &f, &hmhm, &decomp, &grp);
+        &qfe_enc_mat_x, &h_right_origin, &f, &hmhm, &decomp, &grp);
     let total_mat_y = mat_mul_4(
-        &qe_enc_mat_y, &h_right_origin, &f, &hmhm, &decomp, &grp);
+        &qfe_enc_mat_y, &h_right_origin, &f, &hmhm, &decomp, &grp);
     let total_mat_h = mat_mul_4(
-        &qe_enc_mat_h, &h_right_origin, &f, &hmhm, &decomp, &grp);
+        &qfe_enc_mat_h, &h_right_origin, &f, &hmhm, &decomp, &grp);
     
     fn gen_f_and_red(
-        qe_sk: &QfeSk,
+        qfe_sk: &QfeSk,
         total_mat: Matrix,
         grp: &Group,
     ) -> (Matrix, Matrix) {
         let mut sk_f_mat = Matrix::new(1, 1);
         let mut sk_red_mat = Matrix::new(1, 1);
-        println!("do qe_keygen of dim {} for {} times", total_mat.cols, total_mat.rows);
+        println!("do qfe_keygen of dim {} for {} times", total_mat.cols, total_mat.rows);
         let start = SystemTime::now();
         for i in 0..total_mat.rows {
             let row = total_mat.get_row(i);
-            let fk = qe_keygen(&qe_sk, &row, grp);
-            let (sk_f, sk_red) = divide_vector_for_functional_key(&fk, qe_sk.dim, qe_sk.q);
+            let fk = qfe_keygen(&qfe_sk, &row, grp);
+            let (sk_f, sk_red) = divide_vector_for_functional_key(&fk, qfe_sk.dim, qfe_sk.q);
             if i == 0 {
                 sk_f_mat = Matrix::new(total_mat.rows, sk_f.len());
                 sk_red_mat = Matrix::new(total_mat.rows, sk_red.len());
@@ -258,15 +258,15 @@ pub fn protocol_keygen_i(
         }
         let end = SystemTime::now();
         let elapsed = end.duration_since(start).unwrap();
-        println!("qe_keygen for {} times, time: {:?}", total_mat.rows, elapsed);
+        println!("qfe_keygen for {} times, time: {:?}", total_mat.rows, elapsed);
         (sk_f_mat, sk_red_mat)
     }
 
-    let (sk_f_mat_x, sk_red_mat_x) = gen_f_and_red(&qe_sk_keygen, total_mat_x, &grp);
-    let (sk_f_mat_y, sk_red_mat_y) = gen_f_and_red(&qe_sk_keygen, total_mat_y, &grp);
-    let (sk_f_mat_h, sk_red_mat_h) = gen_f_and_red(&qe_sk_keygen, total_mat_h, &grp);
+    let (sk_f_mat_x, sk_red_mat_x) = gen_f_and_red(&qfe_sk_keygen, total_mat_x, &grp);
+    let (sk_f_mat_y, sk_red_mat_y) = gen_f_and_red(&qfe_sk_keygen, total_mat_y, &grp);
+    let (sk_f_mat_h, sk_red_mat_h) = gen_f_and_red(&qfe_sk_keygen, total_mat_h, &grp);
     (
-        (qe_b_x, qe_b_y, qe_b_h), 
+        (qfe_b_x, qfe_b_y, qfe_b_h), 
         (sk_f_mat_x, sk_f_mat_y, sk_f_mat_h), 
         (sk_red_mat_x, sk_red_mat_y, sk_red_mat_h),
     )
@@ -274,7 +274,7 @@ pub fn protocol_keygen_i(
 
 pub fn protocol_dec_i(
     ctxt_triple: (&Vec<Integer>, &Vec<Integer>, &Vec<Integer>),
-    (qe_b_x, qe_b_y, qe_b_h): (&Vec<Integer>, &Vec<Integer>, &Vec<Integer>),
+    (qfe_b_x, qfe_b_y, qfe_b_h): (&Vec<Integer>, &Vec<Integer>, &Vec<Integer>),
     (sk_f_mat_x, sk_f_mat_y, sk_f_mat_h): (&Matrix, &Matrix, &Matrix),
     (sk_red_mat_x, sk_red_mat_y, sk_red_mat_h): (&Matrix, &Matrix, &Matrix),
     dim: usize,
@@ -286,13 +286,13 @@ pub fn protocol_dec_i(
         sk_f_mat: &Matrix,
         sk_red_mat: &Matrix,
         ctxt_triple: (&Vec<Integer>, &Vec<Integer>, &Vec<Integer>),
-        qe_b: &Vec<Integer>,
+        qfe_b: &Vec<Integer>,
         dim: usize,
         q: usize,
         grp: &Group,
     ) -> Vec<Integer> {
         let mut ct_out = vec![Integer::from(0); sk_f_mat.rows];
-        // println!("run qe_dec of dim {} for {} times", sk_f_mat.cols, sk_f_mat.rows);
+        // println!("run qfe_dec of dim {} for {} times", sk_f_mat.cols, sk_f_mat.rows);
         for i in 0..sk_f_mat.rows {
             let sk_f = sk_f_mat.get_row(i);
             // let sk_f = decomp.vector_pow_exp(&sk_f);
@@ -312,11 +312,11 @@ pub fn protocol_dec_i(
             ctxt.extend_from_slice(&enc_x);
             ctxt.extend_from_slice(&enc_y);
             ctxt.extend_from_slice(&enc_h);
-            ct_out[i] =qe_dec(
+            ct_out[i] =qfe_dec(
                 &fk, &ctxt, dim + 1, 2 * (dim + 1) + 1, grp,
             );
         }
-        ct_out = vec_add(&ct_out, &qe_b);
+        ct_out = vec_add(&ct_out, &qfe_b);
         vec_mod(&mut ct_out, &grp.n);
         ct_out
     }
@@ -324,7 +324,7 @@ pub fn protocol_dec_i(
     let ct_out_x = compute_f_red_out(
         &sk_f_mat_x, &sk_red_mat_x,
         ctxt_triple,
-        qe_b_x,
+        qfe_b_x,
         dim,
         q,
         grp,
@@ -332,7 +332,7 @@ pub fn protocol_dec_i(
     let ct_out_y = compute_f_red_out(
         &sk_f_mat_y, &sk_red_mat_y,
         ctxt_triple,
-        qe_b_y,
+        qfe_b_y,
         dim,
         q,
         grp,
@@ -340,7 +340,7 @@ pub fn protocol_dec_i(
     let ct_out_h = compute_f_red_out(
         &sk_f_mat_h, &sk_red_mat_h,
         ctxt_triple,
-        qe_b_h,
+        qfe_b_h,
         dim,
         q,
         grp,
@@ -349,7 +349,7 @@ pub fn protocol_dec_i(
 }
 
 pub fn protocol_keygen_end(
-    qe_sk: &QfeSk,
+    qfe_sk: &QfeSk,
     hm_left: &Matrix,
     f: &Matrix,
     grp: &Group,
@@ -364,11 +364,11 @@ pub fn protocol_keygen_end(
 
     let mut sk_f_mat = Matrix::new(1, 1);
     let mut sk_red_mat = Matrix::new(1, 1);
-    println!("do qe_keygen of dim {} for {} times", fhmhm.cols, fhmhm.rows);
+    println!("do qfe_keygen of dim {} for {} times", fhmhm.cols, fhmhm.rows);
     for i in 0..fhmhm.rows {
         let row = fhmhm.get_row(i);
-        let fk = qe_keygen(&qe_sk, &row, grp);
-        let (sk_f, sk_red) = divide_vector_for_functional_key(&fk, qe_sk.dim, qe_sk.q);
+        let fk = qfe_keygen(&qfe_sk, &row, grp);
+        let (sk_f, sk_red) = divide_vector_for_functional_key(&fk, qfe_sk.dim, qfe_sk.q);
         if i == 0 {
             sk_f_mat = Matrix::new(fhmhm.rows, sk_f.len());
             sk_red_mat = Matrix::new(fhmhm.rows, sk_red.len());
@@ -388,7 +388,7 @@ pub fn protocol_dec_end(
     grp: &Group,
 ) -> Vec<Integer> {
     let mut ct_out = vec![Integer::from(0); sk_f_mat.rows];
-    println!("run qe_dec of dim {} for {} times", sk_f_mat.cols, sk_f_mat.rows);
+    println!("run qfe_dec of dim {} for {} times", sk_f_mat.cols, sk_f_mat.rows);
     for i in 0..sk_f_mat.rows {
         let sk_f = sk_f_mat.get_row(i);
         // let sk_f = decomp.vector_pow_exp(&sk_f);
@@ -411,15 +411,28 @@ pub fn protocol_dec_end(
         ctxt.extend_from_slice(&enc_h);
         println!("ctxt size = {}", ctxt.len());
         println!(" = enc_x.len: {} + enc_y.len: {} + enc_h.len: {}", enc_x.len(), enc_y.len(), enc_h.len());
-        ct_out[i] = qe_dec(
+        ct_out[i] = qfe_dec(
             &fk, &ctxt, dim + 1, 2 * (dim + 1) + 1, &grp,
         );
     }
     ct_out
 }
 
+pub fn composite_enc_h_gamma(
+    qfe_sk: &QfeSk,
+    h_right: &Matrix,
+    gamma_left: &Matrix,
+    dim: usize,
+    q: usize,
+    grp: &Group,
+    dcp: &Decomp,
+    rng: &mut RandState<'_>,
+) {
+
+}
+
 pub fn composite_enc_and_f(
-    qe_sk: &QfeSk,
+    qfe_sk: &QfeSk,
     f: &Matrix,
     dim: usize,
     q: usize,
@@ -449,18 +462,18 @@ pub fn composite_enc_and_f(
         //  ct0_c = d_x_null * rand_x + d_x_inv * (mu * f_col + sk->V * r_x)
         //  ct1_c = d_y_null * rand_y + d_y_inv * (f_col + sk->W * r_y)
         
-        let ct0_left = qe_sk.d_x_null.mul_vec(&rand_x);
-        let mut ct0_right = qe_sk.d_x_inv.mul_vec(&mu_f_col);
+        let ct0_left = qfe_sk.d_x_null.mul_vec(&rand_x);
+        let mut ct0_right = qfe_sk.d_x_inv.mul_vec(&mu_f_col);
         if i == f.cols {
-            ct0_right = vec_add(&ct0_right, &qe_sk.v.mul_vec(&r_x));
+            ct0_right = vec_add(&ct0_right, &qfe_sk.v.mul_vec(&r_x));
         }
         let mut ct0 = vec_add(&ct0_left, &ct0_right);
         vec_mod(&mut ct0, &modulo);
 
-        let ct1_left = qe_sk.d_y_null.mul_vec(&rand_y);
-        let mut ct1_right = qe_sk.d_y_inv.mul_vec(&f_col);
+        let ct1_left = qfe_sk.d_y_null.mul_vec(&rand_y);
+        let mut ct1_right = qfe_sk.d_y_inv.mul_vec(&f_col);
         if i == f.cols {
-            ct1_right = vec_add(&ct1_right, &qe_sk.w.mul_vec(&r_y));
+            ct1_right = vec_add(&ct1_right, &qfe_sk.w.mul_vec(&r_y));
         }
         let mut ct1 = vec_add(&ct1_left, &ct1_right);
         vec_mod(&mut ct1, &modulo);
@@ -470,7 +483,7 @@ pub fn composite_enc_and_f(
         // h = (rand_x tensor f_col) || ((mu_f_col + sk->v * r_x) tensor r_y)
         let h_left = vector::tensor_product_vecs(&r_x, &f_col, &modulo);
         let tmp = if i == f.cols {
-            vec_add(&mu_f_col, &qe_sk.v.mul_vec(&r_x))
+            vec_add(&mu_f_col, &qfe_sk.v.mul_vec(&r_x))
         } else {
             mu_f_col.clone()
         };
@@ -479,22 +492,22 @@ pub fn composite_enc_and_f(
         h.extend_from_slice(&h_left);
         h.extend_from_slice(&h_right);
         println!("check i = {}", i);
-        println!("qe.sk.ipe_sk.dim = {}", qe_sk.ipe_sk.dim);
+        println!("qfe.sk.ipfe_sk.dim = {}", qfe_sk.ipfe_sk.dim);
         println!("h size = {}", h.len());
-        let ctxt_ipe = ipe_enc(&qe_sk.ipe_sk, &h, grp, false, rng);
+        let ctxt_ipfe = ipfe_enc(&qfe_sk.ipfe_sk, &h, grp, false, rng);
         println!("check i = {}", i);
 
-        // ith row of mat_ctxts = (ct0, ct1, ctxt_ipe)
-        let mut row = Vec::with_capacity(ct0.len() + ct1.len() + ctxt_ipe.len());
+        // ith row of mat_ctxts = (ct0, ct1, ctxt_ipfe)
+        let mut row = Vec::with_capacity(ct0.len() + ct1.len() + ctxt_ipfe.len());
         row.extend_from_slice(&ct0);
         row.extend_from_slice(&ct1);
-        row.extend_from_slice(&ctxt_ipe);
+        row.extend_from_slice(&ctxt_ipfe);
         println!("mat_ctxts size = {} x {}", mat_ctxts.rows, mat_ctxts.cols);
         println!("dim, q = {}, {}", dim, q);
         println!("row size = {}", row.len());
         println!("ct0.size = {}", ct0.len());
         println!("ct1.size = {}", ct1.len());
-        println!("ctxt_ipe.size = {}", ctxt_ipe.len());
+        println!("ctxt_ipfe.size = {}", ctxt_ipfe.len());
         mat_ctxts.set_row(i, &row);
     }
 
@@ -505,9 +518,9 @@ pub fn composite_enc_and_f(
     mat_ctxts.transpose()
 }
 
-pub fn protocol_keygen_dcr_to_qe(
+pub fn protocol_keygen_dcr_to_qfe(
     dcr_sk: &Vec<Integer>,
-    qe_sk: &QfeSk,
+    qfe_sk: &QfeSk,
     h_right: &Matrix,
     gamma_left: &Matrix,
     dim: usize,
@@ -521,7 +534,7 @@ pub fn protocol_keygen_dcr_to_qe(
     println!("total_mat size = {} x {}", total_mat.rows, total_mat.cols);
     // composite enc and f
     let fk_mat = composite_enc_and_f(
-        qe_sk, &total_mat, dim+1, 2*dim+1, grp, decomp, rng);
+        qfe_sk, &total_mat, dim+1, 2*dim+1, grp, decomp, rng);
     
     println!("fk_mat size = {} x {}", fk_mat.rows, fk_mat.cols);
 
@@ -529,15 +542,17 @@ pub fn protocol_keygen_dcr_to_qe(
     let mut fk = vec![Integer::from(0); fk_mat.rows];
     for i in 0..fk_mat.rows {
         let row = fk_mat.get_row(i);
+        println!("row size = {}", row.len());
+        println!("dcr_sk size = {}", dcr_sk.len());
         fk[i] = dcr_keygen(dcr_sk, &row);
     }
 
     (fk_mat, fk)
 }
 
-pub fn protocol_keygen_qe_to_qe(
-    qe_sk_enc: &QfeSk,
-    qe_sk_keygen: &QfeSk,
+pub fn protocol_keygen_qfe_to_qfe(
+    qfe_sk_enc: &QfeSk,
+    qfe_sk_keygen: &QfeSk,
     h_right: &Matrix,
     hm_left: &Matrix,
     dim: usize,
@@ -556,26 +571,26 @@ pub fn protocol_keygen_qe_to_qe(
 
     // composite enc and f
     let mat_ctxts = composite_enc_and_f(
-        qe_sk_enc, &total_mat, dim, q, grp, decomp, rng);   
+        qfe_sk_enc, &total_mat, dim, q, grp, decomp, rng);   
         
-    // keygen_qe for each row of mat_ctxts
-    let dim_qe_input = (dim + 1) * (dim + 1) + 1;
-    let q_qe_input =  1;
+    // keygen_qfe for each row of mat_ctxts
+    let dim_qfe_input = (dim + 1) * (dim + 1) + 1;
+    let q_qfe_input =  1;
     let mut fk_mat = Matrix::new(
         mat_ctxts.rows,
-        get_funcional_key_len(dim_qe_input, q_qe_input)
+        get_funcional_key_len(dim_qfe_input, q_qfe_input)
     );
     for i in 0..mat_ctxts.rows {
         let row = mat_ctxts.get_row(i);
-        let fk = qe_keygen(qe_sk_keygen, &row, grp);
+        let fk = qfe_keygen(qfe_sk_keygen, &row, grp);
         fk_mat.set_row(i, &fk);
     }
     
     fk_mat
 }
 
-pub fn protocol_keygen_qe_to_plain(
-    qe_sk: &QfeSk,
+pub fn protocol_keygen_qfe_to_plain(
+    qfe_sk: &QfeSk,
     hm_left: &Matrix,
     f: &Matrix,
     grp: &Group,
@@ -588,7 +603,7 @@ pub fn protocol_keygen_qe_to_plain(
     let mut fk_mat = Matrix::new(1, 1);
     for i in 0..total_mat.rows {
         let row = total_mat.get_row(i);
-        let fk = qe_keygen(qe_sk, &row, grp);
+        let fk = qfe_keygen(qfe_sk, &row, grp);
         if i == 0 {
             fk_mat = Matrix::new(total_mat.rows, fk.len());
         }
@@ -598,7 +613,7 @@ pub fn protocol_keygen_qe_to_plain(
 }
 
 
-pub fn protocol_dec_dcr_to_qe(
+pub fn protocol_dec_dcr_to_qfe(
     ctxt: &Vec<Integer>,
     fk_mat: &Matrix,
     fk_vec: &Vec<Integer>,
@@ -613,7 +628,7 @@ pub fn protocol_dec_dcr_to_qe(
     decomp.vector_inv(&ct_out)
 }
 
-pub fn protocol_dec_qe_to_qe(
+pub fn protocol_dec_qfe_to_qfe(
     ctxt: &Vec<Integer>,
     fk_mat: &Matrix,
     dim: usize,
@@ -626,13 +641,13 @@ pub fn protocol_dec_qe_to_qe(
         let fk = fk_mat.get_row(i);
         let fk = decomp.vector_pow_exp(&fk);
         let enc = ctxt.clone();
-        ct_out[i] = qe_dec(&fk, &enc, dim, q, grp);
+        ct_out[i] = qfe_dec(&fk, &enc, dim, q, grp);
     }
     vec_mod(&mut ct_out, &grp.n);
     decomp.vector_inv(&ct_out)
 }
 
-pub fn protocol_dec_qe_to_plain(
+pub fn protocol_dec_qfe_to_plain(
     ctxt: &Vec<Integer>,
     fk_mat: &Matrix,
     dim: usize,
@@ -643,7 +658,7 @@ pub fn protocol_dec_qe_to_plain(
     for i in 0..fk_mat.rows {
         let fk = fk_mat.get_row(i);
         let enc = ctxt.clone();
-        res[i] = qe_dec(&fk, &enc, dim + 1, 2 * (dim + 1) + 1, grp);
+        res[i] = qfe_dec(&fk, &enc, dim + 1, 2 * (dim + 1) + 1, grp);
     }
     vec_mod(&mut res, &grp.n);
     res

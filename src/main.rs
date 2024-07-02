@@ -30,7 +30,7 @@ use clap::Parser;
 //     n_decomp: usize,
 //     rng: &mut RandState
 // ) -> Vec<Integer> {
-//     println!("run test_ipe_start_to_end");
+//     println!("run test_ipfe_start_to_end");
 
 //     let grp = Group::new(bit_len); // Initialize the group        
 //     // println!("{}", grp);
@@ -65,9 +65,9 @@ use clap::Parser;
 //     println!("start protocol_setup");
 //     let start = SystemTime::now();
 //     let ((dcr_sk, dcr_pk), 
-//         qe_sk_init, 
-//         qe_sk_vec,
-//         _qe_sk_end,
+//         qfe_sk_init, 
+//         qfe_sk_vec,
+//         _qfe_sk_end,
 //     ) = protocol_setup(
 //         vec![dim, dim2, dim3], 
 //         0, 
@@ -89,7 +89,7 @@ use clap::Parser;
 //         (switch_key_x, switch_key_y, switch_key_h),
 //         (switch_key_dcr_x, switch_key_dcr_y, switch_key_dcr_h),
 //     ) = protocol_keygen_switch(
-//         &qe_sk_init,
+//         &qfe_sk_init,
 //         &dcr_sk, 
 //         &h0_right, 
 //         &gamma_left, 
@@ -122,12 +122,12 @@ use clap::Parser;
 
 //     println!("start protocol_keygen_i");
 //     let start = SystemTime::now();
-//     let ((qe_b_x, qe_b_y, qe_b_h), 
+//     let ((qfe_b_x, qfe_b_y, qfe_b_h), 
 //          (sk_f_mat_x, sk_f_mat_y, sk_f_mat_h), 
 //          (sk_red_mat_x, sk_red_mat_y, sk_red_mat_h),
 //         ) = protocol_keygen_i(
-//             &qe_sk_vec[0], 
-//             &qe_sk_init, 
+//             &qfe_sk_vec[0], 
+//             &qfe_sk_init, 
 //             &h1_right, 
 //             &h0_left, 
 //             dim2, 
@@ -143,7 +143,7 @@ use clap::Parser;
 //     let start = SystemTime::now();
 //     let (ct_out_x2, ct_out_y2, ct_out_h2) = protocol_dec_i(
 //         (&ct_out_x, &ct_out_y, &ct_out_h),
-//         (&qe_b_x, &qe_b_y, &qe_b_h),
+//         (&qfe_b_x, &qfe_b_y, &qfe_b_h),
 //         (&sk_f_mat_x, &sk_f_mat_y, &sk_f_mat_h),
 //         (&sk_red_mat_x, &sk_red_mat_y, &sk_red_mat_h),
 //         &decomp,
@@ -154,7 +154,7 @@ use clap::Parser;
 
 //     println!("start protocol_keygen_end");
 //     let start = SystemTime::now();
-//     let (sk_f_mat, sk_f_red) = protocol_keygen_end(&qe_sk_vec[0], &h1_left, &f2, &decomp, &grp);
+//     let (sk_f_mat, sk_f_red) = protocol_keygen_end(&qfe_sk_vec[0], &h1_left, &f2, &decomp, &grp);
 //     let time_protocol_keygen_end = start.elapsed();
 //     println!("Time elapsed in protocol_keygen_end is: {:?}", time_protocol_keygen_end);
 
@@ -206,7 +206,7 @@ use clap::Parser;
 //     scale: i64,
 //     n_decomp: usize,
 // ) {
-//     println!("run test_ipe_start_to_end");
+//     println!("run test_ipfe_start_to_end");
 
 //     let mut rng = RandState::new(); // Create a single RandState object
 //     let d = SystemTime::now()
@@ -267,9 +267,9 @@ use clap::Parser;
 //     println!("start protocol_setup");
 //     let start = SystemTime::now();
 //     let ((dcr_sk, dcr_pk),
-//         qe_sk_init,
-//         qe_sk_vec,
-//         _qe_sk_end,
+//         qfe_sk_init,
+//         qfe_sk_vec,
+//         _qfe_sk_end,
 //     ) = protocol_setup(
 //         vec![dim, dim2, dim3],
 //         0,
@@ -291,7 +291,7 @@ use clap::Parser;
 //         (switch_key_x, switch_key_y, switch_key_h),
 //         (switch_key_dcr_x, switch_key_dcr_y, switch_key_dcr_h),
 //     ) = protocol_keygen_switch(
-//         &qe_sk_init,
+//         &qfe_sk_init,
 //         &dcr_sk,
 //         &h0_right,
 //         &gamma_left,
@@ -324,12 +324,12 @@ use clap::Parser;
 
 //     println!("start protocol_keygen_i");
 //     let start = SystemTime::now();
-//     let ((qe_b_x, qe_b_y, qe_b_h),
+//     let ((qfe_b_x, qfe_b_y, qfe_b_h),
 //          (sk_f_mat_x, sk_f_mat_y, sk_f_mat_h),
 //          (sk_red_mat_x, sk_red_mat_y, sk_red_mat_h),
 //     ) = protocol_keygen_i(
-//         &qe_sk_vec[0],
-//         &qe_sk_init,
+//         &qfe_sk_vec[0],
+//         &qfe_sk_init,
 //         &h1_right,
 //         &h0_left,
 //         dim2,
@@ -345,7 +345,7 @@ use clap::Parser;
 //     let start = SystemTime::now();
 //     let (ct_out_x2, ct_out_y2, ct_out_h2) = protocol_dec_i(
 //         (&ct_out_x, &ct_out_y, &ct_out_h),
-//         (&qe_b_x, &qe_b_y, &qe_b_h),
+//         (&qfe_b_x, &qfe_b_y, &qfe_b_h),
 //         (&sk_f_mat_x, &sk_f_mat_y, &sk_f_mat_h),
 //         (&sk_red_mat_x, &sk_red_mat_y, &sk_red_mat_h),
 //         &decomp,
@@ -356,7 +356,7 @@ use clap::Parser;
 
 //     println!("start protocol_keygen_end");
 //     let start = SystemTime::now();
-//     let (sk_f_mat, sk_f_red) = protocol_keygen_end(&qe_sk_vec[0], &h1_left, &f2, &decomp, &grp);
+//     let (sk_f_mat, sk_f_red) = protocol_keygen_end(&qfe_sk_vec[0], &h1_left, &f2, &decomp, &grp);
 //     let time_protocol_keygen_end = start.elapsed();
 //     println!("Time elapsed in protocol_keygen_end is: {:?}", time_protocol_keygen_end);
 

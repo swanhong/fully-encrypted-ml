@@ -16,7 +16,7 @@ pub struct QfeSk {
     pub d_x_inv: Matrix,
     pub d_y_null: Matrix,
     pub d_y_inv: Matrix,
-    pub ipe_sk: IpfeSk,
+    pub ipfe_sk: IpfeSk,
 }
 
 
@@ -39,7 +39,7 @@ impl QfeSk {
         let (d_x, d_x_inv, d_x_null) = generate_right_inverse_space(dim, dim + q, &modulo, rng);
         let (d_y, d_y_inv, d_y_null) = generate_right_inverse_space(dim, dim + q, &modulo, rng);
 
-        let ipe_sk = IpfeSk::new(4 * dim, q, &grp, rng);
+        let ipfe_sk = IpfeSk::new(4 * dim, q, &grp, rng);
 
         QfeSk {
             dim,
@@ -53,7 +53,7 @@ impl QfeSk {
             d_x_inv,
             d_y_null,
             d_y_inv,
-            ipe_sk,
+            ipfe_sk,
         }
     }
 }
@@ -74,7 +74,7 @@ impl fmt::Display for QfeSk {
         writeln!(f, "d_x_inv: \n{}", self.d_x_inv)?;
         writeln!(f, "d_y_null: \n{}", self.d_y_null)?;
         writeln!(f, "d_y_inv: \n{}", self.d_y_inv)?;
-        writeln!(f, "ipe_sk: \n{}", self.ipe_sk)?;
+        writeln!(f, "ipfe_sk: \n{}", self.ipfe_sk)?;
         Ok(())
     }
 }

@@ -9,14 +9,14 @@ use crate::util::group::Group;
 use crate::util::group::discrete_logarithm;
 use crate::util::matrix::*;
 use crate::util::vector::*;
-use crate::ipfe::scheme::{ipe_keygen, ipe_enc, ipe_enc_matrix_expression, ipe_dec};
+use crate::ipfe::scheme::{ipfe_keygen, ipfe_enc, ipfe_enc_matrix_expression, ipfe_dec};
 use super::keys::QfeSk;
 
-pub fn qe_setup(grp: &Group, dim: usize, q: usize, rng: &mut RandState<'_>) -> QfeSk {
+pub fn qfe_setup(grp: &Group, dim: usize, q: usize, rng: &mut RandState<'_>) -> QfeSk {
     QfeSk::new(grp, dim, q, rng)
 }
 
-pub fn qe_keygen(
+pub fn qfe_keygen(
     sk: &QfeSk,
     f: &Vec<Integer>,
     grp: &Group,
@@ -31,7 +31,7 @@ pub fn qe_keygen(
 
     // for inverse decomposition, add power of base to sk_f
     // sk_f.len() = 4*dim + 2
-    let sk_f = ipe_keygen(&sk.ipe_sk, &mf, grp);
+    let sk_f = ipfe_keygen(&sk.ipfe_sk, &mf, grp);
 
     let dx_dy = Matrix::tensor_product(&sk.d_x, &sk.d_y, &modulo);
     let dx_dy_t = dx_dy.transpose();
@@ -44,7 +44,7 @@ pub fn qe_keygen(
 
     // sf_f.len() = 4 * dim + q + 2
     // sk_red.len() = (dim + q)^2
-    // println!("end of qe_keygen");
+    // println!("end of qfe_keygen");
     // println!("sk_f size = {} = {}", sk_f.len(), 4 * sk.dim + sk.q + 2);
     // println!("sk_red size = {} = {}", sk_red.len(), (sk.dim + sk.q) * (sk.dim + sk.q));
     
@@ -77,7 +77,7 @@ pub fn divide_vector_for_functional_key(
     (sk_f.to_vec(), sk_red.to_vec())
 }
 
-pub fn qe_enc(
+pub fn qfe_enc(
     sk: &QfeSk,
     x: &Vec<Integer>,
     grp: &Group,
@@ -85,7 +85,7 @@ pub fn qe_enc(
 ) -> Vec<Integer> {
     let mod_val = grp.delta.clone();
 
-    fn qe_enc_for_x(
+    fn qfe_enc_for_x(
         v: &Matrix,
         d_null: &Matrix,
         d_inv: &Matrix,
@@ -123,7 +123,7 @@ pub fn qe_enc(
     }
 
     let (ctxt_x, r_x) 
-        = qe_enc_for_x(
+        = qfe_enc_for_x(
             &sk.v, 
             &sk.d_x_null, 
             &sk.d_x_inv, 
@@ -133,7 +133,7 @@ pub fn qe_enc(
             true
         );
     let (ctxt_y, r_y) 
-        = qe_enc_for_x(
+        = qfe_enc_for_x(
             &sk.w, 
             &sk.d_y_null, 
             &sk.d_y_inv, 
@@ -160,20 +160,20 @@ pub fn qe_enc(
         h_join[h_up.len() + i] = h_down[i].clone();
     }
 
-    let ctxt_ipe = ipe_enc(&sk.ipe_sk, &h_join, grp, false, rng);
+    let ctxt_ipfe = ipfe_enc(&sk.ipfe_sk, &h_join, grp, false, rng);
     
     // size of ctxt_x = dim + q
     // size of ctxt_y = dim + q
-    // size of ctxt_ipe = 4 * dim + q + 2
-    // println!("end of qe_enc");
+    // size of ctxt_ipfe = 4 * dim + q + 2
+    // println!("end of qfe_enc");
     println!("ctxt_x size = {} = {}", ctxt_x.len(), sk.dim + sk.q);
     println!("ctxt_y size = {} = {}", ctxt_y.len(), sk.dim + sk.q);
-    println!("ctxt_ipe size = {} = {}", ctxt_ipe.len(), 4 * sk.dim + sk.q + 2);
+    println!("ctxt_ipfe size = {} = {}", ctxt_ipfe.len(), 4 * sk.dim + sk.q + 2);
     
-    let mut res = Vec::with_capacity(ctxt_x.len() + ctxt_y.len() + ctxt_ipe.len());
+    let mut res = Vec::with_capacity(ctxt_x.len() + ctxt_y.len() + ctxt_ipfe.len());
     res.extend_from_slice(&ctxt_x);
     res.extend_from_slice(&ctxt_y);
-    res.extend_from_slice(&ctxt_ipe);
+    res.extend_from_slice(&ctxt_ipfe);
     res
 }
 
@@ -181,7 +181,7 @@ pub fn get_ctxt_len(dim: usize, q: usize) -> usize {
     2 * (dim + q) + 4 * dim + q + 2
 }
 
-pub fn divide_vector_for_qe_ctxt(
+pub fn divide_vector_for_qfe_ctxt(
     ctxt: &Vec<Integer>,
     dim: usize,
     q: usize,
@@ -236,7 +236,7 @@ fn gen_enc_matrix_for_x(
 
 
 fn compute_m_h_b_1(
-    qe_sk: &QfeSk,
+    qfe_sk: &QfeSk,
     n_x: usize,
     n_y: usize,
     r_x: &Vec<Integer>,
@@ -274,7 +274,7 @@ fn compute_m_h_b_1(
     let rx_ry = tensor_product_vecs(r_x, r_y, &modulo);
 
     let i_2 = Matrix::get_identity(2);
-    let v_i_2 = Matrix::tensor_product(&qe_sk.v, &i_2, &modulo);
+    let v_i_2 = Matrix::tensor_product(&qfe_sk.v, &i_2, &modulo);
 
     // Compute V_rx_ry
     let mut v_rx_ry = v_i_2.mul_vec(&rx_ry);
@@ -303,44 +303,44 @@ fn compute_m_h_b_1(
     m_h_b_1
 }
 
-pub fn qe_enc_matrix_expression(
-    qe_sk: &QfeSk,
+pub fn qfe_enc_matrix_expression(
+    qfe_sk: &QfeSk,
     n_x: usize,
     n_y: usize,
     grp: &Group,
     rng: &mut RandState<'_>,
 ) -> (Matrix, Matrix, Matrix) {
     let (enc_x, r_x) = gen_enc_matrix_for_x(
-        &qe_sk.d_x_null,
-        &qe_sk.d_x_inv,
-        &qe_sk.v,
+        &qfe_sk.d_x_null,
+        &qfe_sk.d_x_inv,
+        &qfe_sk.v,
         grp,
         rng,
         true,
     );
 
     let (enc_y, r_y) = gen_enc_matrix_for_x(
-        &qe_sk.d_y_null,
-        &qe_sk.d_y_inv,
-        &qe_sk.w,
+        &qfe_sk.d_y_null,
+        &qfe_sk.d_y_inv,
+        &qfe_sk.w,
         grp,
         rng,
         false,
     );
 
-    let m_h_b_1 = compute_m_h_b_1(qe_sk, n_x, n_y, &r_x, &r_y, grp);
+    let m_h_b_1 = compute_m_h_b_1(qfe_sk, n_x, n_y, &r_x, &r_y, grp);
 
-    let ipe_enc_mat = ipe_enc_matrix_expression(&qe_sk.ipe_sk, grp, false, rng);
+    let ipfe_enc_mat = ipfe_enc_matrix_expression(&qfe_sk.ipfe_sk, grp, false, rng);
 
-    let mut enc_h = ipe_enc_mat * m_h_b_1;
+    let mut enc_h = ipfe_enc_mat * m_h_b_1;
     enc_h.mod_inplace(&grp.delta);
 
     // enc_h = decomp.matrix_col(&enc_h);
     (enc_x, enc_y, enc_h)
 }
 
-pub fn qe_enc_matrix_same_xy(
-    qe_sk: &QfeSk,
+pub fn qfe_enc_matrix_same_xy(
+    qfe_sk: &QfeSk,
     n_x: usize,
     grp: &Group,
     rng: &mut RandState<'_>,
@@ -349,59 +349,59 @@ pub fn qe_enc_matrix_same_xy(
 
 
     let (enc_x, r_x) = gen_enc_matrix_for_x(
-        &qe_sk.d_x_null,
-        &qe_sk.d_x_inv,
-        &qe_sk.v,
+        &qfe_sk.d_x_null,
+        &qfe_sk.d_x_inv,
+        &qfe_sk.v,
         grp,
         rng,
         false,
     );
     let (enc_y, r_y) = gen_enc_matrix_for_x(
-        &qe_sk.d_y_null,
-        &qe_sk.d_y_inv,
-        &qe_sk.w,
+        &qfe_sk.d_y_null,
+        &qfe_sk.d_y_inv,
+        &qfe_sk.w,
         grp,
         rng,
         true,
     );
 
-    let ipe_enc_mat = ipe_enc_matrix_expression(&qe_sk.ipe_sk, grp, false, rng);
-    let m_h_b_1 = compute_m_h_b_1(qe_sk, n_x, n_x, &r_x, &r_y, grp);
-    let mut qe_enc_h_origin = ipe_enc_mat * m_h_b_1;
-    qe_enc_h_origin.mod_inplace(&modulo);
+    let ipfe_enc_mat = ipfe_enc_matrix_expression(&qfe_sk.ipfe_sk, grp, false, rng);
+    let m_h_b_1 = compute_m_h_b_1(qfe_sk, n_x, n_x, &r_x, &r_y, grp);
+    let mut qfe_enc_h_origin = ipfe_enc_mat * m_h_b_1;
+    qfe_enc_h_origin.mod_inplace(&modulo);
 
-    let mut qe_enc_h = Matrix::new(qe_enc_h_origin.rows, n_x + 1);
-    for i in 0..qe_enc_h_origin.rows {
+    let mut qfe_enc_h = Matrix::new(qfe_enc_h_origin.rows, n_x + 1);
+    for i in 0..qfe_enc_h_origin.rows {
         for j in 0..n_x {
-            let mut val1 = qe_enc_h_origin.get(i, j);
-            let val2 = qe_enc_h_origin.get(i, j + n_x);
+            let mut val1 = qfe_enc_h_origin.get(i, j);
+            let val2 = qfe_enc_h_origin.get(i, j + n_x);
             let tmp = (val1 * &grp.mu) + val2;
             val1 = int_mod(&tmp, &modulo);
             // val1 = ((val1 * &grp.mu) + val2) % &modulo;
-            qe_enc_h.set(i, j, val1);
+            qfe_enc_h.set(i, j, val1);
         }
-        let mut val1 = qe_enc_h_origin.get(i, 2 * n_x);
-        let val2 = qe_enc_h_origin.get(i, 2 * n_x + 1);
+        let mut val1 = qfe_enc_h_origin.get(i, 2 * n_x);
+        let val2 = qfe_enc_h_origin.get(i, 2 * n_x + 1);
         let tmp = val1 + val2;
         val1 = int_mod(&tmp, &modulo);
         // val1 = (val1 + val2) % &modulo;
-        qe_enc_h.set(i, n_x, val1);
+        qfe_enc_h.set(i, n_x, val1);
     }
 
-    (enc_x, enc_y, qe_enc_h)
+    (enc_x, enc_y, qfe_enc_h)
 }
 
-pub fn qe_dec(
+pub fn qfe_dec(
     fk: &Vec<Integer>,
     ctxt: &Vec<Integer>,
     dim: usize,
     q: usize,
     grp: &Group,
 ) -> Integer {
-    // println!("qe_dec, input dim, q = {}, {}", dim, q);
-    let (enc_x, enc_y, enc_h) = divide_vector_for_qe_ctxt(ctxt, dim, q);
+    // println!("qfe_dec, input dim, q = {}, {}", dim, q);
+    let (enc_x, enc_y, enc_h) = divide_vector_for_qfe_ctxt(ctxt, dim, q);
     let (sk_f, sk_red) = divide_vector_for_functional_key(fk, dim, q);
-    // println!("qe_dec");
+    // println!("qfe_dec");
     // println!("enc_x size = {}", enc_x.len());
     // println!("enc_y size = {}", enc_y.len());
     // println!("enc_h size = {}", enc_h.len());
@@ -412,10 +412,10 @@ pub fn qe_dec(
     let ctxt_tensor = tensor_product_vecs(&enc_x, &enc_y, &grp.delta);
     let val_mult = vec_inner_pow(&sk_red, &ctxt_tensor, &grp);
 
-    let out_ipe = ipe_dec(&sk_f, &enc_h, &grp, false);
-    let out_ipe_inv = out_ipe.clone().invert(&grp.n_sq).unwrap();
+    let out_ipfe = ipfe_dec(&sk_f, &enc_h, &grp, false);
+    let out_ipfe_inv = out_ipfe.clone().invert(&grp.n_sq).unwrap();
 
-    let val = val_mult * out_ipe_inv.clone();
+    let val = val_mult * out_ipfe_inv.clone();
     let val_mult = int_mod(&val, &grp.n_sq);
     discrete_logarithm(val_mult, &grp)
 }

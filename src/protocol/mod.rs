@@ -50,9 +50,9 @@ mod test {
         println!("start protocol_setup");
         let start = SystemTime::now();
         let ((dcr_sk, dcr_pk), 
-            qe_sk, 
-            _qe_sk_vec,
-            _qe_sk_end,
+            qfe_sk, 
+            _qfe_sk_vec,
+            _qfe_sk_end,
         ) = protocol_setup(
             vec![dim], 
             f_num, 
@@ -70,7 +70,7 @@ mod test {
         let start = SystemTime::now();
         let ((switch_key_x, switch_key_y, switch_key_h), (switch_key_dcr_x, switch_key_dcr_y, switch_key_dcr_h))
         = protocol_keygen_switch(
-            &qe_sk,
+            &qfe_sk,
             &dcr_sk, 
             &h_right, 
             &gamma_left, 
@@ -108,12 +108,12 @@ mod test {
         println!("start protocol_keygen_i");
         let start = SystemTime::now();
         let (
-            (qe_b_x, qe_b_y, qe_b_h),
+            (qfe_b_x, qfe_b_y, qfe_b_h),
             (sk_f_mat_x, sk_f_mat_y, sk_f_mat_h),
             (sk_red_mat_x, sk_red_mat_y, sk_red_mat_h)
         ) = protocol_keygen_i(
-            &qe_sk,
-            &qe_sk,
+            &qfe_sk,
+            &qfe_sk,
             &h_right,
             &h_left,
             dim,
@@ -130,7 +130,7 @@ mod test {
         let start = SystemTime::now();
         let (ct_out_x2, ct_out_y2, ct_out_h2) = protocol_dec_i(
             (&ct_out_x, &ct_out_y, &ct_out_h),
-            (&qe_b_x, &qe_b_y, &qe_b_h),
+            (&qfe_b_x, &qfe_b_y, &qfe_b_h),
             (&sk_f_mat_x, &sk_f_mat_y, &sk_f_mat_h),
             (&sk_red_mat_x, &sk_red_mat_y, &sk_red_mat_h),
             dim,
@@ -143,7 +143,7 @@ mod test {
 
         println!("start protocol_keygen_end");
         let start = SystemTime::now();
-        let (sk_f_mat, sk_f_red) = protocol_keygen_end(&qe_sk, &h_left, &f_mat, &grp);
+        let (sk_f_mat, sk_f_red) = protocol_keygen_end(&qfe_sk, &h_left, &f_mat, &grp);
         let end = start.elapsed();
         println!("Time elapsed in protocol_keygen_end is: {:?}", end);
 
@@ -208,9 +208,9 @@ mod test {
         println!("start protocol_setup");
         let start = SystemTime::now();
         let ((dcr_sk, dcr_pk), 
-            qe_sk, 
-            _qe_sk_vec,
-            _qe_sk_end,
+            qfe_sk, 
+            _qfe_sk_vec,
+            _qfe_sk_end,
         ) = protocol_setup(
             vec![dim], 
             f_num, 
@@ -231,12 +231,12 @@ mod test {
         let end = start.elapsed();
         println!("Time elapsed in protocol_setup is: {:?}", end);
 
-        println!("start protocol_keygen_dcr_to_qe");
+        println!("start protocol_keygen_dcr_to_qfe");
         let start = SystemTime::now();
         let (mat_ctxts, fk)
-        = protocol_keygen_dcr_to_qe(
+        = protocol_keygen_dcr_to_qfe(
             &dcr_sk, 
-            &qe_sk,
+            &qfe_sk,
             &h0_right, 
             &gamma_left, 
             dim + k, 
@@ -245,13 +245,13 @@ mod test {
             &grp, 
             &mut rng);
         let end = start.elapsed();
-        println!("Time elapsed in protocol_keygen_dcr_to_qe is: {:?}", end);
+        println!("Time elapsed in protocol_keygen_dcr_to_qfe is: {:?}", end);
 
-        println!("start protocol_keygen_qe_to_qe");
+        println!("start protocol_keygen_qfe_to_qfe");
         let start = SystemTime::now();
-        let fk_qe_to_qe = protocol_keygen_qe_to_qe(
-            &qe_sk,
-            &qe_sk,
+        let fk_qfe_to_qfe = protocol_keygen_qfe_to_qfe(
+            &qfe_sk,
+            &qfe_sk,
             &h1_right,
             &h0_left,
             dim + k,
@@ -263,12 +263,12 @@ mod test {
             &mut rng
         );
         let end = start.elapsed();
-        println!("Time elapsed in protocol_keygen_qe_to_qe is: {:?}", end);
+        println!("Time elapsed in protocol_keygen_qfe_to_qfe is: {:?}", end);
 
-        println!("start protocol_keygen_qe_to_plain");
+        println!("start protocol_keygen_qfe_to_plain");
         let start = SystemTime::now();
-        let fk_qe_to_plain = protocol_keygen_qe_to_plain(
-            &qe_sk,
+        let fk_qfe_to_plain = protocol_keygen_qfe_to_plain(
+            &qfe_sk,
             &h1_left,
             &f_mat,
             &grp
@@ -281,10 +281,10 @@ mod test {
         let end = start.elapsed();
         println!("Time elapsed in protocol_enc_init is: {:?}", end);
 
-        println!("start protocol_dec_dcr_to_qe");
+        println!("start protocol_dec_dcr_to_qfe");
         let start = SystemTime::now();
         //  run keyswitch
-        let ct0 = protocol_dec_dcr_to_qe(
+        let ct0 = protocol_dec_dcr_to_qfe(
             &ctxt_x, 
             &mat_ctxts,
             &fk,
@@ -292,32 +292,32 @@ mod test {
             &grp
         );
         let end = start.elapsed();
-        println!("Time elapsed in protocol_dec_dcr_to_qe is: {:?}", end);
+        println!("Time elapsed in protocol_dec_dcr_to_qfe is: {:?}", end);
 
-        println!("start protocol_dec_qe_to_qe");
+        println!("start protocol_dec_qfe_to_qfe");
         let start = SystemTime::now();
-        let ct1 = protocol_dec_qe_to_qe(
+        let ct1 = protocol_dec_qfe_to_qfe(
             &ct0,
-            &fk_qe_to_qe,
+            &fk_qfe_to_qfe,
             dim + k,
             q,
             &decomp,
             &grp
         );
         let end = start.elapsed();
-        println!("Time elapsed in protocol_dec_qe_to_qe is: {:?}", end);
+        println!("Time elapsed in protocol_dec_qfe_to_qfe is: {:?}", end);
 
-        println!("start protocol_dec_qe_to_plain");
+        println!("start protocol_dec_qfe_to_plain");
         let start = SystemTime::now();
-        let val_end = protocol_dec_qe_to_plain(
+        let val_end = protocol_dec_qfe_to_plain(
             &ct1,
-            &fk_qe_to_plain,
+            &fk_qfe_to_plain,
             dim,
             q,
             &grp
         );
         let end = start.elapsed();
-        println!("Time elapsed in protocol_dec_qe_to_plain is: {:?}", end);
+        println!("Time elapsed in protocol_dec_qfe_to_plain is: {:?}", end);
 
         println!("reprint inputs");
         println!("x: {:?}", x);

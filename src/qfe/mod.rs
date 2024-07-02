@@ -8,11 +8,11 @@ mod tests {
     use rug::Integer;
     use rug::rand::RandState;
     use std::time::{Duration, SystemTime};
-    use crate::qfe::scheme::{qe_setup, qe_keygen, qe_enc, qe_enc_matrix_same_xy, qe_dec, qe_enc_matrix_expression};
+    use crate::qfe::scheme::{qfe_setup, qfe_keygen, qfe_enc, qfe_enc_matrix_same_xy, qfe_dec, qfe_enc_matrix_expression};
     use crate::util::vector::{gen_random_vector, gen_random_vector_signed, vec_mod, vec_mul_scalar, int_mod};
 
     #[test]
-    fn test_qe_start_to_end() {
+    fn test_qfe_start_to_end() {
         let mut rand = RandState::new(); // Create a single RandState object
         let d = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
@@ -39,26 +39,26 @@ mod tests {
 
         // Perform setup
         let start = SystemTime::now();
-        let qe_sk = qe_setup(&grp, dim, q, &mut rand);
+        let qfe_sk = qfe_setup(&grp, dim, q, &mut rand);
         let end = start.elapsed();
-        println!("Time elapsed in qe_setup is: {:?}", end);
+        println!("Time elapsed in qfe_setup is: {:?}", end);
 
         // Perform key generation
         let start = SystemTime::now();
-        let fk = qe_keygen(&qe_sk, &f, &grp);
+        let fk = qfe_keygen(&qfe_sk, &f, &grp);
         let end = start.elapsed();
-        println!("Time elapsed in qe_keygen is: {:?}", end);
+        println!("Time elapsed in qfe_keygen is: {:?}", end);
         
-        let ctxt = qe_enc(&qe_sk, &x, &grp, &mut rand);
+        let ctxt = qfe_enc(&qfe_sk, &x, &grp, &mut rand);
         println!("ctxt_size = {}", ctxt.len());
         // let mut ctxt_x: Vec<Integer>;
         // let mut ctxt_y: Vec<Integer>;
         // let mut ctxt_h: Vec<Integer>;
         // // Perform encryption
         // let start = SystemTime::now();
-        // let (enc_mat_x, enc_mat_y, enc_mat_h) = qe_enc_matrix_same_xy(&qe_sk, dim, &grp, &mut rand);
+        // let (enc_mat_x, enc_mat_y, enc_mat_h) = qfe_enc_matrix_same_xy(&qfe_sk, dim, &grp, &mut rand);
         // let end = start.elapsed();
-        // println!("Time elapsed in qe_enc_matrix is: {:?}", end);
+        // println!("Time elapsed in qfe_enc_matrix is: {:?}", end);
 
         // let mut x1 = x.clone();
         // x1.push(Integer::from(1));
@@ -71,9 +71,9 @@ mod tests {
         // vec_mod(&mut ctxt_h, &grp.delta);
         
         let start = SystemTime::now();
-        let out = qe_dec(&fk, &ctxt, dim, q, &grp);
+        let out = qfe_dec(&fk, &ctxt, dim, q, &grp);
         let end = start.elapsed();
-        println!("Time elapsed in qe_dec is: {:?}", end);
+        println!("Time elapsed in qfe_dec is: {:?}", end);
 
         println!("x = {:?}", x);
         println!("f = {:?}", f);

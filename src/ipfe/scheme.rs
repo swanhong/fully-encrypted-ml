@@ -1,4 +1,4 @@
-// ipe.rs
+// ipfe.rs
 #![allow(dead_code)]
 
 extern crate rug;
@@ -11,12 +11,12 @@ use crate::util::matrix::*;
 use crate::util::vector::*;
 use super::keys::IpfeSk;
 
-pub fn ipe_setup(group: &Group, dim: usize, q: usize, rng: &mut RandState<'_>) -> IpfeSk {
+pub fn ipfe_setup(group: &Group, dim: usize, q: usize, rng: &mut RandState<'_>) -> IpfeSk {
     IpfeSk::new(dim, q, group, rng)
 }
 
 
-pub fn ipe_keygen(sk: &IpfeSk, y: &Vec<Integer>, grp: &Group) -> Vec<Integer> {
+pub fn ipfe_keygen(sk: &IpfeSk, y: &Vec<Integer>, grp: &Group) -> Vec<Integer> {
     let mut val;
     let mod_val = grp.delta.clone();
     
@@ -52,7 +52,7 @@ pub fn ipe_keygen(sk: &IpfeSk, y: &Vec<Integer>, grp: &Group) -> Vec<Integer> {
     sk_f
 }
 
-pub fn ipe_enc(
+pub fn ipfe_enc(
     sk: &IpfeSk,
     x: &Vec<Integer>,
     grp: &Group,
@@ -92,7 +92,7 @@ pub fn ipe_enc(
     ctxt
 }
 
-pub fn ipe_enc_matrix_expression(sk: &IpfeSk, grp: &Group, mult_mu: bool, rand: &mut RandState<'_>) -> Matrix {
+pub fn ipfe_enc_matrix_expression(sk: &IpfeSk, grp: &Group, mult_mu: bool, rand: &mut RandState<'_>) -> Matrix {
     let mod_val = grp.delta.clone();
     let r_pr = mod_val.clone().random_below(rand);
     // r = 2 * N * r'
@@ -121,13 +121,13 @@ pub fn ipe_enc_matrix_expression(sk: &IpfeSk, grp: &Group, mult_mu: bool, rand: 
         sk.sk_enc.clone()
     };
 
-    let mut ipe_enc_mat = concatenate_vec_col(&sk_enc_mu, &enc_x_b);
-    ipe_enc_mat.mod_inplace(&mod_val);
+    let mut ipfe_enc_mat = concatenate_vec_col(&sk_enc_mu, &enc_x_b);
+    ipfe_enc_mat.mod_inplace(&mod_val);
 
-    ipe_enc_mat 
+    ipfe_enc_mat 
 }
 
-pub fn ipe_dec(sk_f: &Vec<Integer>, ctxt: &Vec<Integer>, grp: &Group, solve_dl: bool) -> Integer {
+pub fn ipfe_dec(sk_f: &Vec<Integer>, ctxt: &Vec<Integer>, grp: &Group, solve_dl: bool) -> Integer {
     let mut out = vec_inner_pow(&sk_f, &ctxt, &grp);
     if solve_dl {
         out = discrete_logarithm(out.clone(), &grp);
