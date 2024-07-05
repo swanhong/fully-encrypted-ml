@@ -6,14 +6,15 @@ mod test {
     use rug::Integer;
     use rug::rand::RandState;
     use std::time::SystemTime;
-    use crate::protocol::algorithm::{row_reduce_form, row_reduce_form_integer, sample_gamma_wo_padding, sample_h_wo_padding};
+
+    use crate::protocol::algorithm::{row_reduce_form, row_reduce_form_integer, sample_gamma_wo_padding, sample_h_trivial, sample_h_wo_padding};
     use crate::protocol::scheme::*;
     use crate::util::group::Group;
 
     use crate::util::matrix::{Matrix, eval_quadratic_multivariate};
     use crate::util::vector::{gen_random_vector, vec_mod, tensor_product_vecs};
     use crate::util::decomp::Decomp;
-    use super::algorithm::{sample_h, sample_gamma};
+    use super::algorithm::{sample_h, sample_gamma, sample_gamma_trivial};
 
     #[test]
     fn test_protocol_start_to_end() {
@@ -187,47 +188,58 @@ mod test {
         let grp = Group::new(bit_len); // Initialize the group   
         println!("!!! WARNING !!! bit len for primes = {}: this is not secure !!!", bit_len);     
         
-        let dim = 5;
+        let dim = 3;
         let k = 1;
         let q = 2 * dim + 1;
-        let f_num = dim;
-        let bound = 10;
+        let f_num = 2;
+        let bound = 5;
         let sk_bound = Integer::from(10);
-
-        let decomp = Decomp::new(3, &grp);
-        // println!("decomp = {}", decomp);
+        let decomp = Decomp::new(4, &grp);
+        
         let x = gen_random_vector(dim, &Integer::from(bound), &mut rng);
-        let mut f_mat = Matrix::new(f_num, dim * dim);
-        for i in 0..f_num {
-            let f = gen_random_vector(dim, &Integer::from(bound), &mut rng);
+        // let x = vec![Integer::from(0); dim];
+        let mut f_mat = Matrix::new(dim + 1, (dim + 1) * (dim + 1));
+        let mut f_mat_no_padding = Matrix::new(dim, dim * dim);
+        for i in 0..dim { 
+            let mut f = gen_random_vector(dim, &Integer::from(bound), &mut rng);
             let f_tensor = tensor_product_vecs(&f, &f, &grp.delta);
+            f_mat_no_padding.set_row(i, &f_tensor);
+            f.push(Integer::from(1));
+            // let f_tensor = tensor_product_vecs(&f, &f, &grp.delta);
+            let f_tensor = gen_random_vector((dim + 1) * (dim + 1), &Integer::from(bound), &mut rng);
             f_mat.set_row(i, &f_tensor);
         }
+        let mut unit_vector = vec![Integer::from(0); f_mat.cols];
+        unit_vector[f_mat.cols - 1] = Integer::from(1);
+        f_mat.set_row(dim, &unit_vector);
 
         // Perform setup
         println!("start protocol_setup");
         let start = SystemTime::now();
         let ((dcr_sk, dcr_pk), 
-            qfe_sk, 
-            _qfe_sk_vec,
-            _qfe_sk_end,
-        ) = protocol_setup(
-            vec![dim], 
+            qfe_sk_dcr_to_qe, 
+            qfe_sk_qe_to_qe,
+            qfe_sk_end,
+        ) = protocol_setup_new(
+            vec![dim, dim, dim], 
             f_num, 
             k,
             &sk_bound, 
             &grp, 
             &mut rng);
 
-        let (h0_left, h0_right) = sample_h_wo_padding(dim, k, &grp.delta, &mut rng);
-        println!("dim, k = {}, {}", dim, k);
-        println!("h0_left size = {} x {}", h0_left.rows, h0_left.cols);
-        println!("h0_right size = {} x {}", h0_right.rows, h0_right.cols);
+        let (h0_left, h0_right) = sample_h(dim, k, &grp.n, &mut rng);
+        let (h1_left, h1_right) = sample_h(dim, k, &grp.n, &mut rng);
+        let (gamma_left, gamma_right) = sample_gamma(dim, dim, &grp.n, &mut rng);
 
-        let (h1_left, h1_right) = sample_h_wo_padding(dim, k, &grp.delta, &mut rng);
-        let (gamma_left, gamma_right) = sample_gamma_wo_padding(dim, dim, &grp.delta, &mut rng);
-        println!("gamma_left size = {} x {}", gamma_left.rows, gamma_left.cols);
-        println!("gamma_right size = {} x {}", gamma_right.rows, gamma_right.cols);
+        // remove random for test
+        // println!(" !!!!! REMOVE RANDOM FOR TESTING in geenrating H, gamma for protocol_setup !!!!! ");
+        let (h0_left, h0_right) = sample_h_trivial(dim, k);
+        let (h1_left, h1_right) = sample_h_trivial(dim, k);
+        let h1_left = h0_left.clone();
+        let h1_right = h0_right.clone();
+        // let (gamma_left, gamma_right) = sample_gamma_trivial(dim, dim);
+
         let end = start.elapsed();
         println!("Time elapsed in protocol_setup is: {:?}", end);
 
@@ -236,27 +248,23 @@ mod test {
         let (mat_ctxts, fk)
         = protocol_keygen_dcr_to_qfe(
             &dcr_sk, 
-            &qfe_sk,
+            &qfe_sk_dcr_to_qe,
             &h0_right, 
             &gamma_left, 
-            dim + k, 
-            q,
             &decomp, 
             &grp, 
             &mut rng);
         let end = start.elapsed();
+        println!("fk_dcr_to_qfe size = {} x {}, {}", mat_ctxts.rows, mat_ctxts.cols, fk.len());
         println!("Time elapsed in protocol_keygen_dcr_to_qfe is: {:?}", end);
 
         println!("start protocol_keygen_qfe_to_qfe");
         let start = SystemTime::now();
         let fk_qfe_to_qfe = protocol_keygen_qfe_to_qfe(
-            &qfe_sk,
-            &qfe_sk,
+            &qfe_sk_dcr_to_qe,
+            &qfe_sk_dcr_to_qe,
             &h1_right,
             &h0_left,
-            dim + k,
-            q,
-            k,
             &f_mat,
             &decomp,
             &grp,
@@ -268,11 +276,15 @@ mod test {
         println!("start protocol_keygen_qfe_to_plain");
         let start = SystemTime::now();
         let fk_qfe_to_plain = protocol_keygen_qfe_to_plain(
-            &qfe_sk,
+            &qfe_sk_dcr_to_qe, // changed
             &h1_left,
             &f_mat,
+            &decomp,
             &grp
         );
+        println!("fk_qfe_to_plain size = {} x {}", fk_qfe_to_plain.rows, fk_qfe_to_plain.cols);
+        let end = start.elapsed();
+        println!("Time elapsed in protocol_keygen_qfe_to_plain is: {:?}", end);
 
 
         println!("start protocol_enc_init");
@@ -280,7 +292,7 @@ mod test {
         let ctxt_x = protocol_enc_init(&dcr_pk, &gamma_right, &x, &grp, &mut rng);
         let end = start.elapsed();
         println!("Time elapsed in protocol_enc_init is: {:?}", end);
-
+        
         println!("start protocol_dec_dcr_to_qfe");
         let start = SystemTime::now();
         //  run keyswitch
@@ -294,42 +306,55 @@ mod test {
         let end = start.elapsed();
         println!("Time elapsed in protocol_dec_dcr_to_qfe is: {:?}", end);
 
-        println!("start protocol_dec_qfe_to_qfe");
-        let start = SystemTime::now();
-        let ct1 = protocol_dec_qfe_to_qfe(
-            &ct0,
-            &fk_qfe_to_qfe,
-            dim + k,
-            q,
-            &decomp,
-            &grp
-        );
-        let end = start.elapsed();
-        println!("Time elapsed in protocol_dec_qfe_to_qfe is: {:?}", end);
+        // println!("start protocol_dec_qfe_to_qfe");
+        // let start = SystemTime::now();
+        // let ct0 = protocol_dec_qfe(
+        //     &ct0,
+        //     &fk_qfe_to_qfe,
+        //     dim + k,
+        //     q,
+        //     &decomp,
+        //     &grp,
+        //     true,
+        // );
+        // let end = start.elapsed();
+        // println!("Time elapsed in protocol_dec_qfe_to_qfe is: {:?}", end);
 
         println!("start protocol_dec_qfe_to_plain");
         let start = SystemTime::now();
-        let val_end = protocol_dec_qfe_to_plain(
-            &ct1,
+        let mut val_end = protocol_dec_qfe(
+            &ct0,
             &fk_qfe_to_plain,
-            dim,
+            dim + k,
             q,
-            &grp
+            &decomp,
+            &grp,
+            false,
         );
         let end = start.elapsed();
         println!("Time elapsed in protocol_dec_qfe_to_plain is: {:?}", end);
 
         println!("reprint inputs");
         println!("x: {:?}", x);
-        println!("f_mat: {:?}", f_mat);
-        let fx = eval_quadratic_multivariate(&x, &x, &f_mat);
-        println!("f(x) = {:?}", fx);
+        println!("f_mat: {}", f_mat);
+        // let fx = eval_quadratic_multivariate(&x, &x, &f_mat_no_padding);
+        // println!("f(x) = {:?}", fx);
+        // let mut ffx = eval_quadratic_multivariate(&fx, &fx, &f_mat_no_padding);
+        // println!("f(f(x)) = {:?}", ffx);
+        // vec_mod(&mut ffx, &grp.n);
 
-        let mut ffx = eval_quadratic_multivariate(&fx, &fx, &f_mat);
-        println!("f(f(x)) = {:?}", ffx);
-        vec_mod(&mut ffx, &grp.n);
-        println!("real mod n = {:?}", ffx);
-        println!("eval result: {:?}", val_end);
+        let mut x_one = x.clone();
+        x_one.push(Integer::from(1));
+        println!("x_one = {:?}", x_one);
+        let fx_one = eval_quadratic_multivariate(&x_one, &x_one, &f_mat);
+        println!("f(x) (1 padding) = {:?}", fx_one);
+        let ffx_one = eval_quadratic_multivariate(&fx_one, &fx_one, &f_mat);
+        // println!("f(f(x)) (1 padding) = {:?}", ffx_one);
+
+        // println!("real mod n = {:?}", ffx);
+        // println!("eval result: {:?}", val_end);
+        vec_mod(&mut val_end, &grp.n);
+        println!("eval result mod n = {:?}", val_end);
     }
 
     #[test]

@@ -190,6 +190,31 @@ pub fn sample_h(dim: usize, k: usize, modulo: &Integer, rng: &mut RandState<'_>)
     (h, h_pr)
 }
 
+pub fn sample_h_trivial(dim: usize, k: usize) -> (Matrix, Matrix) {
+    // sample two matrices h_left_1 and h_right_1
+    
+    // h_left is dim * (dim + k ) ternary matrix
+    // h_right is (dim + k) * dim matrix satisfying h_left * h_right = identity_dim
+
+    // h_right = h^t * (h * h^t)^-1 
+    // h_left_1 = (h_left, 1)
+    // h_right_1 = (h_right, 1)
+
+    let mut h_0 = Matrix::new(dim, dim + k);
+    let mut h_pr_0 = Matrix::new(dim + k, dim);
+
+    for i in 0..dim {
+        h_0.set(i, i, Integer::from(1));
+        h_pr_0.set(i, i, Integer::from(1));
+    }
+
+
+    let h = concatenate_diag_one(&h_0);
+    let h_pr = concatenate_diag_one(&h_pr_0);
+
+    (h, h_pr)
+}
+
 
 pub fn sample_h_wo_padding(dim: usize, k: usize, modulo: &Integer, rng: &mut RandState<'_>) -> (Matrix, Matrix) {
     // sample two matrices h_left_1 and h_right_1
@@ -269,6 +294,32 @@ pub fn sample_gamma(
 
     let mut gamma_pr_0 = gamma_0_t * gamma_0_inv;
     gamma_pr_0.mod_inplace(modulo);
+
+    let gamma_1 = concatenate_diag_one(&gamma_0);
+    let gamma_pr_1 = concatenate_diag_one(&gamma_pr_0);
+
+    (gamma_1, gamma_pr_1)
+}
+
+pub fn sample_gamma_trivial(
+    dim: usize,
+    k: usize,
+) -> (Matrix, Matrix) {
+    // sample two matrices gamma_left_1 and gamma_right_1
+    
+    // gamma_left is dim * (dim + k ) binary matrix
+    // gamma_right is (dim + k) * dim matrix satisfying gamma_left * gamma_right = identity_dim
+
+    // gamma_right = gamma^t * (gamma * gamma^t)^-1 
+    // gamma_left_1 = (gamma_left, 1)
+    // gamma_right_1 = (gamma_right, 1)
+    let mut gamma_0 = Matrix::new(dim, dim + k);
+    let mut gamma_pr_0 = Matrix::new(dim + k, dim);
+
+    for i in 0..dim {
+        gamma_0.set(i, i, Integer::from(1));
+        gamma_pr_0.set(i, i, Integer::from(1));
+    }
 
     let gamma_1 = concatenate_diag_one(&gamma_0);
     let gamma_pr_1 = concatenate_diag_one(&gamma_pr_0);

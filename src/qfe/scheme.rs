@@ -4,7 +4,6 @@ extern crate rug;
 use rug::Integer;
 use rug::rand::RandState;
 
-
 use crate::util::group::Group;
 use crate::util::group::discrete_logarithm;
 use crate::util::matrix::*;
@@ -25,14 +24,15 @@ pub fn qfe_keygen(
     let modulo = grp.delta.clone();
 
     // sk_f = sk->M_f * f
-    // mf.dim = 4 * dim
+    // sk.m : 4dim * dim^2
+    // f : dim^2
+    // mf: 4 * dim
     let mut mf = sk.m.mul_vec(&f);
     vec_mod(&mut mf, &modulo);
 
     // for inverse decomposition, add power of base to sk_f
     // sk_f.len() = 4*dim + 2
     let sk_f = ipfe_keygen(&sk.ipfe_sk, &mf, grp);
-
     let dx_dy = Matrix::tensor_product(&sk.d_x, &sk.d_y, &modulo);
     let dx_dy_t = dx_dy.transpose();
 
@@ -44,14 +44,9 @@ pub fn qfe_keygen(
 
     // sf_f.len() = 4 * dim + q + 2
     // sk_red.len() = (dim + q)^2
-    // println!("end of qfe_keygen");
-    // println!("sk_f size = {} = {}", sk_f.len(), 4 * sk.dim + sk.q + 2);
-    // println!("sk_red size = {} = {}", sk_red.len(), (sk.dim + sk.q) * (sk.dim + sk.q));
-    
     let mut res = Vec::with_capacity(sk_f.len() + sk_red.len());
     res.extend_from_slice(&sk_f);
     res.extend_from_slice(&sk_red);
-
     // final size = 4 * dim + 2 + (dim + q)^2
     res
 }
@@ -109,6 +104,7 @@ pub fn qfe_enc(
         
         // Generate random vectors
         let r_x = gen_random_vector(2, &modulo, rng);
+        let r_x = vec_mul_scalar(&r_x, &(Integer::from(2) * &grp.n));
         let rand = gen_random_vector(d_null.cols, &modulo, rng);
 
         // Compute right_x
@@ -151,14 +147,9 @@ pub fn qfe_enc(
 
     let h_up = tensor_product_vecs(&r_x, &x, &mod_val);
     let h_down = tensor_product_vecs(&tmp, &r_y, &mod_val);
-
-    let mut h_join = vec![Integer::from(0); h_up.len() + h_down.len()];
-    for i in 0..h_up.len() {
-        h_join[i] = h_up[i].clone();
-    }
-    for i in 0..h_down.len() {
-        h_join[h_up.len() + i] = h_down[i].clone();
-    }
+    let mut h_join = Vec::with_capacity(h_up.len() + h_down.len());
+    h_join.extend_from_slice(&h_up);
+    h_join.extend_from_slice(&h_down);
 
     let ctxt_ipfe = ipfe_enc(&sk.ipfe_sk, &h_join, grp, false, rng);
     

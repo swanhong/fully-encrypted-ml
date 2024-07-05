@@ -43,6 +43,8 @@ mod tests {
         let end = start.elapsed();
         println!("Time elapsed in qfe_setup is: {:?}", end);
 
+        println!("qfe_sk: {}", qfe_sk);
+
         // Perform key generation
         let start = SystemTime::now();
         let fk = qfe_keygen(&qfe_sk, &f, &grp);

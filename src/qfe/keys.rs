@@ -26,6 +26,15 @@ impl QfeSk {
         
         let v = Matrix::random(dim, 2, &modulo, rng);
         let w = Matrix::random(dim, 2, &modulo, rng);
+        let (d_x, d_x_inv, d_x_null) = generate_right_inverse_space(dim, dim + q, &modulo, rng);
+        let (d_y, d_y_inv, d_y_null) = generate_right_inverse_space(dim, dim + q, &modulo, rng);
+
+        // remove randomness for testing
+        // println!(" !!!!! REMOVE RANDOM FOR TESTING in qfe key !!!!! ");
+        // let v = Matrix::new(dim, 2);
+        // let w = Matrix::new(dim, 2);
+        // let (d_x, d_x_inv, d_x_null) = generate_right_inverse_space_trivial(dim, dim + q, &modulo, rng);
+        // let (d_y, d_y_inv, d_y_null) = generate_right_inverse_space_trivial(dim, dim + q, &modulo, rng);
 
         let i_dim = Matrix::get_identity(dim);
 
@@ -36,9 +45,6 @@ impl QfeSk {
         let m_down = Matrix::tensor_product(&i_dim, &w_t, &modulo);
         let m = concatenate_row(&m_up, &m_down);
         
-        let (d_x, d_x_inv, d_x_null) = generate_right_inverse_space(dim, dim + q, &modulo, rng);
-        let (d_y, d_y_inv, d_y_null) = generate_right_inverse_space(dim, dim + q, &modulo, rng);
-
         let ipfe_sk = IpfeSk::new(4 * dim, q, &grp, rng);
 
         QfeSk {

@@ -10,3 +10,6 @@ rand = "0.8.5"
 rug = "1.19.0"
 rayon= "1.7.0"
 clap = { version = "4.5.4", features = ["derive"] }
+
+[dev-dependencies]
+env_logger = "0.11.3"
