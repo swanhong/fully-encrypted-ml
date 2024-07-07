@@ -8,7 +8,7 @@ mod tests {
     use rug::Integer;
     use rug::rand::RandState;
     use std::time::{Duration, SystemTime};
-    use crate::qfe::scheme::{qfe_setup, qfe_keygen, qfe_enc, qfe_enc_matrix_same_xy, qfe_dec, qfe_enc_matrix_expression};
+    use crate::qfe::scheme::{qfe_setup, qfe_keygen, qfe_enc, qfe_enc_matrix_same_xy, qfe_dec, qfe_enc_matrix_expression, qfe_enc_test_for_protocol};
     use crate::util::vector::{gen_random_vector, gen_random_vector_signed, vec_mod, vec_mul_scalar, int_mod};
 
     #[test]
@@ -24,10 +24,13 @@ mod tests {
         
         let dim = 6;
         let q = 2 * dim + 1;
-        let bound = 1000000;
+        let bound = 100;
 
         let x = gen_random_vector_signed(dim, &Integer::from(2 * bound), &mut rand);
         let f = gen_random_vector_signed(dim * dim, &Integer::from(2 * bound), &mut rand);
+
+        // let x = gen_random_vector_signed(dim, &grp.delta, &mut rand);
+        // let f = gen_random_vector_signed(dim * dim, &grp.delta, &mut rand);
 
         // compute out2 = inner product <f, x tensor y>
         let mut out2 = Integer::from(0);
@@ -51,8 +54,13 @@ mod tests {
         let end = start.elapsed();
         println!("Time elapsed in qfe_keygen is: {:?}", end);
         
-        let ctxt = qfe_enc(&qfe_sk, &x, &grp, &mut rand);
-        println!("ctxt_size = {}", ctxt.len());
+        let ctxt2 = qfe_enc(&qfe_sk, &x, &grp, &mut rand);
+        let ctxt = qfe_enc_test_for_protocol(&qfe_sk, &x, &grp, &mut rand);
+        println!("ctxt comparison");
+        println!("size: {} {}", ctxt.len(), ctxt2.len());
+        for i in 0..ctxt.len() {
+            println!("{}: {} {}", i, ctxt[i], ctxt2[i]);
+        }
         // let mut ctxt_x: Vec<Integer>;
         // let mut ctxt_y: Vec<Integer>;
         // let mut ctxt_h: Vec<Integer>;

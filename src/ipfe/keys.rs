@@ -47,11 +47,11 @@ impl IpfeSk {
         // sk1 = (D_inv_left + D_inv_right * U) * a
 
         // remove random for test
-        // println!(" !!!!! REMOVE RANDOM FOR TESTING in ipfe key !!!!! ");
-        // let a = vec![Integer::from(1); 2];
-        // let u = Matrix::new(dim, 2);
-        // let u_t = Matrix::new(2, dim);
-        // let (d, d_inv, d_perp) = generate_right_inverse_space_trivial(dim + 2, dim + 2 + q, &grp.delta, rng);
+        println!(" !!!!! REMOVE RANDOM FOR TESTING in ipfe key !!!!! ");
+        let a = vec![Integer::from(0); 2];
+        let u = Matrix::new(dim, 2);
+        let u_t = Matrix::new(2, dim);
+        let (d, d_inv, d_perp) = generate_right_inverse_space_trivial(dim + 2, dim + 2 + q, &grp.delta, rng);
 
         let mut d_inv_left = Matrix::new(d_inv.rows, 2);
         let mut sk_enc = Matrix::new(d_inv.rows, dim);
