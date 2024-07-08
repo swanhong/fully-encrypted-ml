@@ -430,33 +430,25 @@ pub fn protocol_dec_end(
 
 pub fn protocol_setup_new(
     dim_vec: Vec<usize>,
-    f_num: usize,
+    depth: usize,
     k: usize,
     sk_bound: &Integer,
     grp: &Group,
     rng: &mut RandState<'_>,
 ) -> (
     (Vec<Integer>, Vec<Integer>),
-    QfeSk,
-    // Vec<QfeSk>,
-    // QfeSk
+    Vec<QfeSk>,
 ) {
     let dim = dim_vec[0];
     let (dcr_sk, dcr_pk) = dcr_setup(2 * dim + 1, sk_bound, grp, rng);
-    let qfe_sk_dcr_to_qe = qfe_setup(grp, dim + k + 1, 2 * (dim + k + 1) + 1, rng);
-    let mut qfe_sk_qe_to_qe = Vec::new();
-    for i in 0..f_num {
-        let dim = dim_vec[0];
-        qfe_sk_qe_to_qe.push(qfe_setup(grp, dim + k + 1, 2 * (dim + k + 1) + 1, rng));
+    let mut qfe_sk = Vec::new();
+    for i in 0..depth {
+        let dim = dim_vec[i];
+        qfe_sk.push(qfe_setup(grp, dim + k + 1, 2 * (dim + k + 1) + 1, rng));
     }
-    let dim: usize = dim_vec[0];
-    let qfe_sk_end = qfe_setup(grp, dim + k + 1, 2 * (dim + k + 1) + 1, rng);
-
     (
         (dcr_sk, dcr_pk),
-        qfe_sk_dcr_to_qe,
-        // qfe_sk_qe_to_qe, 
-        // qfe_sk_end
+        qfe_sk
     )
 }
 
@@ -583,8 +575,8 @@ pub fn protocol_keygen_dcr_to_qfe(
 }
 
 pub fn protocol_keygen_qfe_to_qfe(
-    qfe_sk_enc: &QfeSk,
     qfe_sk_keygen: &QfeSk,
+    qfe_sk_enc: &QfeSk,
     h_right: &Matrix,
     hm_left: &Matrix,
     f: &Matrix,
@@ -592,22 +584,20 @@ pub fn protocol_keygen_qfe_to_qfe(
     grp: &Group,
     rng: &mut RandState<'_>,
 ) -> Matrix {
-    // function: h_right * f * (hm_left tensor hm-left)
+    // function: h_right * f * (hm_left tensor hm_left)
     let hmhm = Matrix::tensor_product(&hm_left, &hm_left, &grp.delta);
-    println!("h_right dim = {} x {}", h_right.rows, h_right.cols);
-    println!("f dim = {} x {}", f.rows, f.cols);
-    println!("hmhm dim = {} x {}", hmhm.rows, hmhm.cols);
-    let total_mat = h_right * f * &hmhm;
+    let mut total_mat: Matrix = h_right * &(f * &hmhm);
+    total_mat.mod_inplace(&grp.n);
 
     // composite enc and f
-    let mat_ctxts = composite_enc_and_f(
-        qfe_sk_enc, &total_mat, grp, decomp, rng);   
+    let mat_ctxts = qfe_cenc(&qfe_sk_enc, &total_mat, grp, rng);
+    let mat_ctxts = decomp.matrix_col(&mat_ctxts);
     // keygen_qfe for each row of mat_ctxts
+    println!("run qfe_keygen of dim {} for {} times", mat_ctxts.cols, mat_ctxts.rows);
     let mut fk_mat = Matrix::new(
         mat_ctxts.rows,
         get_funcional_key_len(qfe_sk_keygen.dim, qfe_sk_keygen.q)
     );
-    println!("run qfe_keygen of dim {} for {} times", mat_ctxts.cols, mat_ctxts.rows);
     for i in 0..mat_ctxts.rows {
         let row = mat_ctxts.get_row(i);
         let fk = qfe_keygen(qfe_sk_keygen, &row, grp);
@@ -625,8 +615,6 @@ pub fn protocol_keygen_qfe_to_plain(
     grp: &Group,
 ) -> Matrix {
     let hmhm = Matrix::tensor_product(&hm_left, &hm_left, &grp.delta);
-    println!("f size = {} x {}", f.rows, f.cols);
-    println!("hmhm size = {} x {}", hmhm.rows, hmhm.cols);
     let mut total_mat = f * &hmhm;
     total_mat.mod_inplace(&grp.n);
 
@@ -684,20 +672,3 @@ pub fn protocol_dec_qfe(
     }
     
 }
-
-// pub fn protocol_dec_qfe_to_plain(
-//     ctxt: &Vec<Integer>,
-//     fk_mat: &Matrix,
-//     dim: usize,
-//     q: usize,
-//     grp: &Group,
-// ) -> Vec<Integer> {
-//     let mut res = vec![Integer::from(0); fk_mat.rows];
-//     println!("run qfe_dec of dim {} for {} times", fk_mat.cols, fk_mat.rows);
-//     for i in 0..fk_mat.rows {
-//         let fk = fk_mat.get_row(i);
-//         res[i] = qfe_dec(&fk, &ctxt, dim + 1, 2 * (dim + 1) + 1, grp);
-//     }
-//     vec_mod(&mut res, &grp.n);
-//     res
-// }

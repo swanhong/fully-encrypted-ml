@@ -158,7 +158,7 @@ pub fn sample_h(dim: usize, k: usize, modulo: &Integer, rng: &mut RandState<'_>)
     let mut h_0: Matrix; // dim * (dim + k)
     let mut h_t: Matrix; // (dim + k) * dim
     let h_0_inv: Matrix; // dim * dim
-    let h_pr_0: Matrix; // (dim + k) * dim
+    let mut h_pr_0: Matrix; // (dim + k) * dim
 
     loop {
         // sample h_0 from {-1, 0, 1}^{dim * (dim+k)}
@@ -182,12 +182,13 @@ pub fn sample_h(dim: usize, k: usize, modulo: &Integer, rng: &mut RandState<'_>)
     }
     
     h_pr_0 = h_t * h_0_inv;
+    h_pr_0.mod_inplace(modulo);
     
 
     let h = concatenate_diag_one(&h_0);
     let h_pr = concatenate_diag_one(&h_pr_0);
 
-    (h, h_pr)
+    (h_pr.transpose(), h.transpose())
 }
 
 pub fn sample_h_trivial(dim: usize, k: usize) -> (Matrix, Matrix) {
@@ -259,14 +260,13 @@ pub fn sample_h_wo_padding(dim: usize, k: usize, modulo: &Integer, rng: &mut Ran
 
 pub fn sample_gamma(
     dim: usize,
-    k: usize,
     modulo: &Integer,
     rng: &mut RandState<'_>,
 ) -> (Matrix, Matrix) {
     // sample two matrices gamma_left_1 and gamma_right_1
     
-    // gamma_left is dim * (dim + k ) binary matrix
-    // gamma_right is (dim + k) * dim matrix satisfying gamma_left * gamma_right = identity_dim
+    // gamma_left is dim * 2dim binary matrix
+    // gamma_right is 2dim * dim matrix satisfying gamma_left * gamma_right = identity_dim
 
     // gamma_right = gamma^t * (gamma * gamma^t)^-1 
     // gamma_left_1 = (gamma_left, 1)
@@ -276,9 +276,15 @@ pub fn sample_gamma(
     let gamma_0_inv: Matrix;
 
     loop {
-        gamma_0 = Matrix::random( dim, dim + k, &Integer::from(2), rng);
+        gamma_0 = Matrix::random( 2 * dim, dim, &Integer::from(3), rng);
+        for i in 0..gamma_0.rows() {
+            for j in 0..gamma_0.cols() {
+                let val = gamma_0.get(i, j);
+                gamma_0.set(i, j, val - 1);
+            }
+        }
         gamma_0_t = gamma_0.transpose();
-        let mut tmp = gamma_0.clone() * gamma_0_t.clone();
+        let mut tmp = gamma_0_t.clone() * gamma_0.clone();
         tmp.mod_inplace(modulo);
         match matrix_inverse(&mut tmp, modulo) {
             Ok(m_inv) => {
@@ -292,13 +298,13 @@ pub fn sample_gamma(
     }
     
 
-    let mut gamma_pr_0 = gamma_0_t * gamma_0_inv;
+    let mut gamma_pr_0 = gamma_0_inv * gamma_0_t;
     gamma_pr_0.mod_inplace(modulo);
 
     let gamma_1 = concatenate_diag_one(&gamma_0);
     let gamma_pr_1 = concatenate_diag_one(&gamma_pr_0);
 
-    (gamma_1, gamma_pr_1)
+    (gamma_pr_1, gamma_1)
 }
 
 pub fn sample_gamma_trivial(

@@ -82,7 +82,7 @@ fn run_protocol_start_to_end(
     let (h0_left, h0_right) = sample_h(dim, k, &grp.delta, rng);
     let (h1_left, h1_right) = sample_h(dim2, k, &grp.delta, rng);
 
-    let (gamma_left, gamma_right) = sample_gamma(dim, dim, &grp.delta, rng);
+    let (gamma_left, gamma_right) = sample_gamma(dim, &grp.delta, rng);
     let time_setup = start.elapsed();
     println!("Time elapsed in protocol_setup is: {:?}", time_setup);
 
