@@ -82,5 +82,5 @@ pub fn dcr_dec(ct_x: &Vec<Integer>, y: &Vec<Integer>, sk_y: &Integer, grp: &Grou
     quo.div_rem_mut(&mut rem);
     // let (quo, rem) = out.div_rem(grp.n.clone());
     assert!(rem == Integer::from(0), "Remainder is not 0");
-    quo
+    int_mod(&quo, &grp.n)
 }

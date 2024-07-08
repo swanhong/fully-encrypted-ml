@@ -476,27 +476,33 @@ pub fn composite_enc_and_f(
     let modulo = grp.delta.clone();
 
     let mut mat_ctxts = Matrix::new(f.cols, get_ctxt_len(dim, q));
-    println!("f_cols = {}", f.cols);
-    println!("dim = {}", dim);
+    
+    let r_x = gen_random_vector(2, &grp.delta, rng);
+    let r_y = gen_random_vector(2, &grp.delta, rng);
+    let r_x = vec_mul_scalar(&r_x, &(grp.n.clone() * 2));
+    let r_y = vec_mul_scalar(&r_y, &(grp.n.clone() * 2));
+
     for i in 0..f.cols {
         let f_col = f.get_col(i);
         let mut mu_f_col = vec_mul_scalar(&f_col, &grp.mu);
 
-        let (ct_0, r_x) = qfe_enc_for_x(
+        let ct_0 = qfe_enc_for_x(
             &qfe_sk.v, 
             &qfe_sk.d_x_null, 
             &qfe_sk.d_x_inv, 
             &f_col, 
+            &r_x,
             &grp, 
             rng, 
             true,
             i == f.cols - 1
         );
-        let (ct_1, r_y) = qfe_enc_for_x(
+        let ct_1 = qfe_enc_for_x(
             &qfe_sk.w, 
             &qfe_sk.d_y_null, 
             &qfe_sk.d_y_inv, 
             &f_col, 
+            &r_y,
             &grp, 
             rng, 
             false,
@@ -506,10 +512,11 @@ pub fn composite_enc_and_f(
         let ctxt_ipfe = qfe_enc_for_h(
             &qfe_sk, 
             &f_col, 
-            r_x, 
-            r_y, 
+            &r_x, 
+            &r_y, 
             grp, 
-            rng
+            rng,
+            i == f.cols - 1
         );
         // ith row of mat_ctxts = (ct0, ct1, ctxt_ipfe)
         let mut row = Vec::with_capacity(ct_0.len() + ct_1.len() + ctxt_ipfe.len());
@@ -544,7 +551,6 @@ pub fn protocol_keygen_dcr_to_qfe(
 ) -> (Matrix, Vec<Integer>) {
     let mut total_mat = h_right * gamma_left;
     total_mat.mod_inplace(&grp.n);
-    println!("total mat = \n{}", total_mat);
     
     // composite enc and f
     // let fk_mat2 = composite_enc_and_f(

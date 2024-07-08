@@ -179,7 +179,7 @@ pub mod test {
     fn test_protocol_start_to_end_new() {
         println!("run test_protocol_start_to_end");
 
-        for try_num in 0..20 {
+        for try_num in 0..100 {
             println!(" ==================== ");
             println!(" ==================== ");
             println!(" try number = {}", try_num);
@@ -213,9 +213,7 @@ pub mod test {
             let f_tensor = tensor_product_vecs(&f, &f, &grp.delta);
             f_mat_no_padding.set_row(i, &f_tensor);
             f.push(Integer::from(1));
-            // let f_tensor = tensor_product_vecs(&f, &f, &grp.delta);
             let f_tensor = gen_random_vector((dim + 1) * (dim + 1), &Integer::from(bound), &mut rng);
-            let f_tensor = vec![Integer::from(0); (dim + 1) * (dim + 1)];
             f_mat.set_row(i, &f_tensor);
         }
         let mut unit_vector = vec![Integer::from(0); f_mat.cols];
@@ -256,12 +254,6 @@ pub mod test {
         let gamma_left = gamma_left.transpose();
         let gamma_right = gamma_right.transpose();
 
-        println!("gamma_left = \n{}", gamma_left);
-        println!("gamma_right = \n{}", gamma_right);
-        println!("gamma mult text");
-        let mut mult = gamma_left.clone() * gamma_right.clone();
-        mult.mod_inplace(&grp.n);
-        println!("{}", mult);
 
 
         let end = start.elapsed();
@@ -362,24 +354,24 @@ pub mod test {
         println!("dec_test_out_one = {:?}", dec_test_out_one);
 
         // print h0_right * gamma_left * gamma_right * x
-        println!("h0_right size = {} x {}", h0_right.rows, h0_right.cols);
-        println!("gamma_left size = {} x {}", gamma_left.rows, gamma_left.cols);
-        println!("gamma_right size = {} x {}", gamma_right.rows, gamma_right.cols);
-        println!("x1 size = {}", x1.len());
+        // println!("h0_right size = {} x {}", h0_right.rows, h0_right.cols);
+        // println!("gamma_left size = {} x {}", gamma_left.rows, gamma_left.cols);
+        // println!("gamma_right size = {} x {}", gamma_right.rows, gamma_right.cols);
+        // println!("x1 size = {}", x1.len());
         let mut mult = h0_right.clone() * gamma_left.clone();
         mult = mult * gamma_right.clone();
         let mut h0_right_x = mult * x1.clone();
         vec_mod(&mut h0_right_x, &grp.n);
-        println!("h0_right_x = {:?}", h0_right_x);
+        // println!("h0_right_x = {:?}", h0_right_x);
         let mut h0_right_x_tensor  = tensor_product_vecs(&h0_right_x, &h0_right_x, &grp.delta);
-        println!("h0_right_x_tensor = {:?}", h0_right_x_tensor);
-        println!("sum = {:?}", h0_right_x_tensor.iter().sum::<Integer>());
+        // println!("h0_right_x_tensor = {:?}", h0_right_x_tensor);
+        // println!("sum = {:?}", h0_right_x_tensor.iter().sum::<Integer>());
         let ctxt_h0_right_x = qfe_enc(&qfe_sk_dcr_to_qe, &h0_right_x, &grp, &mut rng);
-        println!("compare ctxt_h0_right_x vs ct0");
-        for i in 0..ctxt_h0_right_x.len() {
-            println!("{}th: {}", i, ctxt_h0_right_x[i] == ct0[i]);
-            println!("bit lengths: {} vs {}", ctxt_h0_right_x[i].significant_bits(), ct0[i].significant_bits());
-        }
+        // println!("compare ctxt_h0_right_x vs ct0");
+        // for i in 0..ctxt_h0_right_x.len() {
+        //     println!("{}th: {}", i, ctxt_h0_right_x[i] == ct0[i]);
+        //     println!("bit lengths: {} vs {}", ctxt_h0_right_x[i].significant_bits(), ct0[i].significant_bits());
+        // }
 
 
         // println!("start protocol_dec_qfe_to_qfe");

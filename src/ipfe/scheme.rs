@@ -68,9 +68,9 @@ pub fn ipfe_enc(
     let rand: Vec<Integer> = gen_random_vector(sk.d_perp.cols, &mod_val, rng);
 
     // remove randomness for testing
-    println!(" !!!!! REMOVE RANDOM FOR TESTING in ipfe enc !!!!! ");
-    let rand = vec![Integer::from(0); sk.d_perp.cols];
-    let r = Integer::from(0);
+    // println!(" !!!!! REMOVE RANDOM FOR TESTING in ipfe enc !!!!! ");
+    // let rand = vec![Integer::from(0); sk.d_perp.cols];
+    // let r = Integer::from(0);
     
     let mut d_perp_rand = sk.d_perp.mul_vec(&rand);
     vec_mod(&mut d_perp_rand, &mod_val);

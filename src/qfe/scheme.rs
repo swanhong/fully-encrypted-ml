@@ -78,34 +78,25 @@ pub fn qfe_enc_for_x(
     d_null: &Matrix,
     d_inv: &Matrix,
     x: &Vec<Integer>,
+    r_x: &Vec<Integer>,
     grp: &Group,
     rng: &mut RandState<'_>,
     mult_mu: bool,
     use_sk_v: bool,
-) -> (Vec<Integer>, Vec<Integer>) {
+) -> Vec<Integer> {
     // right_x = x * mu + (sk->V * r_x)
     // ctxt_x = D_x_null * rand + D_inv_x * right_x
     let modulo = grp.delta.clone();
-    let mu = grp.mu.clone();
 
-    let x_mu = if mult_mu {
-        let mut x_temp = vec_mul_scalar(&x, &mu);
-        vec_mod(&mut x_temp, &modulo);
-        x_temp
+    // Generate random vectors
+    let rand = gen_random_vector(d_null.cols, &modulo, rng);
+
+    let mut x_mu = if mult_mu {
+        vec_mul_scalar(&x, &grp.mu)
     } else {
         x.clone()
     };
-    
-    // Generate random vectors
-    let r_x = gen_random_vector(2, &modulo, rng);
-    let r_x = vec_mul_scalar(&r_x, &(Integer::from(2) * &grp.n));
-    let rand = gen_random_vector(d_null.cols, &modulo, rng);
-
-    // remove random for testing
-    println!(" !!!!! REMOVE RANDOM FOR TESTING in qfe_enc_x !!!!! ");
-    let r_x = vec![Integer::from(0); 2];
-    let rand = vec![Integer::from(0); d_null.cols];
-    
+    vec_mod(&mut x_mu, &modulo);
 
     // Compute right_x
     // right_x = x_mu + V * r_x, if use_sk_v = false, then remove V * r_x
@@ -117,25 +108,31 @@ pub fn qfe_enc_for_x(
     vec_mod(&mut right_x, &modulo);
 
     // Compute ctxt_x
-    let mut ctxt_x = vec_add(&d_inv.mul_vec(&right_x), &d_null.mul_vec(&rand));
+    let mut ctxt_x = vec_add(
+        &d_inv.mul_vec(&right_x), &d_null.mul_vec(&rand));
     vec_mod(&mut ctxt_x, &modulo);
     
-    (ctxt_x, r_x)
+    ctxt_x
 }
 
 pub fn qfe_enc_for_h(
     sk: &QfeSk, 
     x: &Vec<Integer>, 
-    r_x: Vec<Integer>, 
-    r_y: Vec<Integer>, 
+    r_x: &Vec<Integer>, 
+    r_y: &Vec<Integer>, 
     grp: &Group, 
-    rng: &mut RandState
+    rng: &mut RandState,
+    use_sk_v: bool,
 ) -> Vec<Integer> {
     let modulo = grp.delta.clone();
-    // tmp = x_mu + V * r_x
-    let tmp1 = vec_mul_scalar(&x, &grp.mu);
-    let tmp2 = sk.v.mul_vec(&r_x);
-    let mut tmp = vec_add(&tmp1, &tmp2);
+    // tmp = x_mu (+ V * r_x)
+    let x_mu = vec_mul_scalar(&x, &grp.mu);
+    let mut tmp = if use_sk_v {
+        let tmp2 = sk.v.mul_vec(&r_x);
+        vec_add(&x_mu, &tmp2)
+    } else {
+        x_mu
+    };
     vec_mod(&mut tmp, &modulo);
 
     let h_up = tensor_product_vecs(&r_x, &x, &modulo);
@@ -155,23 +152,27 @@ pub fn qfe_enc(
     rng: &mut RandState<'_>,
 ) -> Vec<Integer> {
     assert_eq!(x.len(), sk.dim, "x.len() = {} != sk.dim = {}", x.len(), sk.dim);
-    let (ctxt_x, r_x) 
-        = qfe_enc_for_x(
+    let r_x = gen_random_vector(2, &grp.delta, rng);
+    let r_y = gen_random_vector(2, &grp.delta, rng);
+    let r_x = vec_mul_scalar(&r_x, &(grp.n.clone() * 2));
+    let r_y = vec_mul_scalar(&r_y, &(grp.n.clone() * 2));
+    let ctxt_x = qfe_enc_for_x(
             &sk.v, 
             &sk.d_x_null, 
             &sk.d_x_inv, 
             &x, 
+            &r_x,
             &grp, 
             rng, 
             true,
             true,
         );
-    let (ctxt_y, r_y) 
-        = qfe_enc_for_x(
+    let ctxt_y = qfe_enc_for_x(
             &sk.w, 
             &sk.d_y_null, 
             &sk.d_y_inv, 
             &x, 
+            &r_y,
             &grp, 
             rng, 
             false,
@@ -181,10 +182,11 @@ pub fn qfe_enc(
     let ctxt_ipfe = qfe_enc_for_h(
         sk, 
         x, 
-        r_x, 
-        r_y, 
+        &r_x, 
+        &r_y, 
         grp, 
-        rng
+        rng,
+        true,
     );
     
     assert_eq!(ctxt_x.len(), sk.dim + sk.q, "ctxt_x.len() = {} != sk.dim + sk.q = {}", ctxt_x.len(), sk.dim + sk.q);
@@ -204,37 +206,47 @@ pub fn qfe_cenc(
     grp: &Group,
     rng: &mut RandState<'_>,
 ) -> Matrix {
+    let r_x_0 = gen_random_vector(2, &grp.delta, rng);
+    let r_y_0 = gen_random_vector(2, &grp.delta, rng);
+    let r_x = vec_mul_scalar(&r_x_0, &(grp.n.clone() * 2));
+    let r_y = vec_mul_scalar(&r_y_0, &(grp.n.clone() * 2));
+    // rmove random
+    // let r_x = vec![Integer::from(0); 2];
+    // let r_y = vec![Integer::from(0); 2];
+
     let mut ct_mat = Matrix::new(m_f.cols, get_ctxt_len(sk.dim, sk.q));
     for i in 0..m_f.cols {
         let f_col = m_f.get_col(i);
-        let (ct_0, r_x) = qfe_enc_for_x(
+        let ct_0 = qfe_enc_for_x(
             &sk.v,
             &sk.d_x_null,
             &sk.d_x_inv,
             &f_col,
+            &r_x,
             &grp,
             rng,
             true,
             i == m_f.cols - 1,
         );
-        let (ct_1, r_y) = qfe_enc_for_x(
+        let ct_1 = qfe_enc_for_x(
             &sk.w,
             &sk.d_y_null,
             &sk.d_y_inv,
             &f_col,
+            &r_y,
             &grp,
             rng,
             false,
             i == m_f.cols - 1,
         );
-        let ct_h = qfe_enc_for_h(sk, &f_col, r_x, r_y, &grp, rng);
+        let ct_h = qfe_enc_for_h(
+            sk, &f_col, &r_x, &r_y, &grp, rng, i == m_f.cols - 1,
+        );
 
         let mut row = Vec::with_capacity(ct_0.len() + ct_1.len() + ct_h.len());
         row.extend_from_slice(&ct_0);
         row.extend_from_slice(&ct_1);
         row.extend_from_slice(&ct_h);
-        println!("row.len() = {}", row.len());
-        println!("ct_mat.cols = {}", ct_mat.cols);
         ct_mat.set_row(i, &row);
     }
     println!("!!!!!!!!cenc used1!!!!!!!");

@@ -6,6 +6,7 @@ mod test {
     use crate::util::group::Group;
     use crate::dcr::scheme::{dcr_setup, dcr_keygen, dcr_enc, dcr_dec};
     use std::time::{Instant, SystemTime};
+    use crate::util::vector::{gen_random_vector_signed, int_mod};
 
     #[test]
     pub fn test_dcr_start_to_end() {
@@ -13,7 +14,7 @@ mod test {
     
     let bit_len = 10;
     let dim: usize = 10;
-    let bound = Integer::from(10);
+    let bound = Integer::from(10000);
 
     println!("bit_len: {}", bit_len);
     println!("dim: {}", dim);
@@ -28,12 +29,8 @@ mod test {
     .expect("Duration since UNIX_EPOCH failed");
     let mut rand = rug::rand::RandState::new();
     rand.seed(&Integer::from(d.as_secs()));
-    let mut x = vec![Integer::from(0); dim];
-    let mut y = vec![Integer::from(0); dim];
-    for i in 0..y.len() {
-        x[i] = bound.clone().random_below(&mut rand);
-        y[i] = bound.clone().random_below(&mut rand);
-    }
+    let x = gen_random_vector_signed(dim, &bound, &mut rand);
+    let y = gen_random_vector_signed(dim, &bound, &mut rand);
     println!("x: {:?}", x);
     println!("y: {:?}", y);
     
@@ -68,6 +65,7 @@ mod test {
     for i in 0..x.len() {
         real_ip += x[i].clone() * y[i].clone();
     }
+    real_ip = int_mod(&mut real_ip, &grp.n);
     println!("real_ip: {}", real_ip);
     assert_eq!(out, real_ip);
     }

@@ -22,15 +22,13 @@ mod tests {
         let grp = Group::new(100); // Initialize the group        
         // println!("{}", grp);
         
-        let dim = 6;
+        let dim = 4;
         let q = 2 * dim + 1;
-        let bound = 100;
+        let bound = 10;
 
-        let x = gen_random_vector_signed(dim, &Integer::from(2 * bound), &mut rand);
+        let mut x = gen_random_vector_signed(dim, &Integer::from(2 * bound), &mut rand);
+        x[dim - 1] = Integer::from(1);
         let f = gen_random_vector_signed(dim * dim, &Integer::from(2 * bound), &mut rand);
-
-        // let x = gen_random_vector_signed(dim, &grp.delta, &mut rand);
-        // let f = gen_random_vector_signed(dim * dim, &grp.delta, &mut rand);
 
         // compute out2 = inner product <f, x tensor y>
         let mut out2 = Integer::from(0);
@@ -46,21 +44,19 @@ mod tests {
         let end = start.elapsed();
         println!("Time elapsed in qfe_setup is: {:?}", end);
 
-        println!("qfe_sk: {}", qfe_sk);
-
         // Perform key generation
         let start = SystemTime::now();
         let fk = qfe_keygen(&qfe_sk, &f, &grp);
         let end = start.elapsed();
         println!("Time elapsed in qfe_keygen is: {:?}", end);
         
-        let ctxt2 = qfe_enc(&qfe_sk, &x, &grp, &mut rand);
+        // let ctxt = qfe_enc(&qfe_sk, &x, &grp, &mut rand);
         let ctxt = qfe_enc_test_for_protocol(&qfe_sk, &x, &grp, &mut rand);
-        println!("ctxt comparison");
-        println!("size: {} {}", ctxt.len(), ctxt2.len());
-        for i in 0..ctxt.len() {
-            println!("{}: {} {}", i, ctxt[i], ctxt2[i]);
-        }
+        // println!("ctxt comparison");
+        // println!("size: {} {}", ctxt.len(), ctxt2.len());
+        // for i in 0..ctxt.len() {
+        //     println!("{}", ctxt[i] == ctxt2[i]);
+        // }
         // let mut ctxt_x: Vec<Integer>;
         // let mut ctxt_y: Vec<Integer>;
         // let mut ctxt_h: Vec<Integer>;
