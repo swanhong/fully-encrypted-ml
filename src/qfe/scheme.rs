@@ -249,7 +249,6 @@ pub fn qfe_cenc(
         row.extend_from_slice(&ct_h);
         ct_mat.set_row(i, &row);
     }
-    println!("!!!!!!!!cenc used1!!!!!!!");
     ct_mat.transpose()
 }
 
@@ -264,7 +263,6 @@ pub fn qfe_enc_test_for_protocol(
     let ct_mat = qfe_cenc(sk, &m_f, grp, rng);
     let mut ct_out = ct_mat.mul_vec(&x);
     vec_mod(&mut ct_out, &grp.delta);
-    println!("!!!!!!! ct_out is generated using test_for_protocol");
     ct_out
 }
 
