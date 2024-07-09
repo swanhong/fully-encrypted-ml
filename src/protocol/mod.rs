@@ -33,7 +33,7 @@ pub mod test {
         
         let dim = 3;
         let k = 1;
-        let depth = 4;
+        let depth = dim;
         let bound = 5;
         let sk_bound = Integer::from(10);
         let decomp = Decomp::new(3, &grp);
@@ -60,14 +60,14 @@ pub mod test {
         let start = SystemTime::now();
         let ((dcr_sk, dcr_pk), 
             qfe_sk, 
-        ) = protocol_setup_new(
-            vec![dim; depth], 
-            depth, 
+        ) = protocol_setup(
+            &vec![dim; depth + 1],  
             k,
             &sk_bound, 
             &grp, 
             &mut rng
         );
+        println!("qfe_sk.len = {}", qfe_sk.len());
 
         let mut h_left = vec![Matrix::new(0, 0); depth];
         let mut h_right = vec![Matrix::new(0, 0); depth];
@@ -100,7 +100,7 @@ pub mod test {
         println!("start protocol_keygen_qfe_to_qfe");
         let mut fk_qfe_to_qfe = vec![Matrix::new(0, 0); depth - 1];
         let start = SystemTime::now();
-        for i in 0..(depth-1) {
+        for i in 0..fk_qfe_to_qfe.len() {
             fk_qfe_to_qfe[i] = protocol_keygen_qfe_to_qfe(
                 &qfe_sk[i],
                 &qfe_sk[i + 1],
@@ -128,7 +128,7 @@ pub mod test {
         println!("start protocol_keygen_qfe_to_plain");
         let start = SystemTime::now();
         let mut fk_qfe_to_plain_test = vec![Matrix::new(0, 0); depth - 1];
-        for i in 0..(depth-1) {
+        for i in 0..fk_qfe_to_plain_test.len() {
             fk_qfe_to_plain_test[i] = protocol_keygen_qfe_to_plain(
                 &qfe_sk[i], // changed
                 &h_left[i],
@@ -142,7 +142,7 @@ pub mod test {
         //     &f_mat,
         //     &grp
         // );
-
+        println!("test done");
         let fk_qfe_to_plain = protocol_keygen_qfe_to_plain(
             &qfe_sk[depth - 1],
             &h_left[depth - 1],
@@ -240,7 +240,8 @@ pub mod test {
         let end = start.elapsed();
         println!("Time elapsed in protocol_dec_qfe_to_plain is: {:?}", end);
 
-        val_end[depth - 1] = val_end_final;
+        val_end[depth - 1] = val_end_final.clone();
+        println!("val_ewnd = {:?}", val_end_final);
 
         println!("reprint inputs");
         println!("x: {:?}", x);

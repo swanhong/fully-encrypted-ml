@@ -14,20 +14,8 @@ pub struct Argument {
     #[arg(short, long, default_value_t = 100)]
     pub bit_len: u64,
 
-    /// input dimension for the protocol
-    /// (default = 5)
-    #[arg(long, default_value_t = 5)]
-    pub dim0: usize,
-
-    /// intermediate dimension for the protocol
-    /// (default = 4)
-    #[arg(long, default_value_t = 4)]
-    pub dim1: usize,
-
-    /// output dimension for the protocol
-    /// (default = 3)
-    #[arg(long, default_value_t = 3)]
-    pub dim2: usize,
+    #[clap(long, value_parser)]
+    pub dim: Vec<usize>,
 
     /// message & function bound
     /// (default = 10)
@@ -86,14 +74,10 @@ impl fmt::Display for Argument {
         if self.target_algorithm == "protocol" {
             write!(
                 f,
-                "dim0               : {}\n\
-                 dim1               : {}\n\
-                 dim2               : {}\n\
+                "dim                : {:?}\n\
                  bound              : {}\n\
                  n_try              : {}\n",
-                self.dim0,
-                self.dim1,
-                self.dim2,
+                self.dim,
                 self.bound,
                 self.n_try,
             )
@@ -111,9 +95,7 @@ impl fmt::Display for Argument {
                 "=== pQuant Parameters ===\n\
                  target_algorithm   : {}\n\
                  bit_len            : {}\n\
-                 dim0               : {}\n\
-                 dim1               : {}\n\
-                 dim2               : {}\n\
+                 dim                : {:?}\n\
                  bound              : {}\n\
                  n_try              : {}\n\
                  data_ml            : {}\n\
@@ -121,9 +103,7 @@ impl fmt::Display for Argument {
                  n_decomp           : {}",
                 self.target_algorithm,
                 self.bit_len,
-                self.dim0,
-                self.dim1,
-                self.dim2,
+                self.dim,
                 self.bound,
                 self.n_try,
                 self.data_ml.as_ref().map(|s| s.clone()).unwrap_or_default(),

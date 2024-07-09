@@ -19,7 +19,7 @@ use crate::protocol::scheme::*;
 use crate::util::group::Group;
 use crate::protocol::algorithm::{sample_h_wo_padding, sample_gamma_wo_padding};
 use crate::util::vector::tensor_product_vecs;
-use crate::util::matrix::{Matrix, eval_quadratic_multivariate, concatenate_col, concatenate_vec_row};
+use crate::util::matrix::{Matrix, eval_quadratic_multivariate, concatenate_row,  concatenate_col, concatenate_vec_row};
 use crate::util::vector::{gen_random_vector, vec_mod};
 use crate::util::decomp::Decomp;
 use crate::protocol::algorithm::{sample_h, sample_gamma};
@@ -28,39 +28,43 @@ use clap::Parser;
 
 fn run_protocol_start_to_end(
     bit_len: u64,
-    dim_vec: &Vec<usize>, 
+    dim: &Vec<usize>, 
     bound: usize,
     n_decomp: usize,
     rng: &mut RandState
 ) -> Vec<Integer> {
     println!("run test_ipfe_start_to_end");
 
-    let grp = Group::new(bit_len); // Initialize the group        
+    let grp = Group::new(bit_len); // Initialize the group    
+    let depth = dim.len() - 1;  
     // println!("{}", grp);
     
-    assert_eq!(dim_vec.len(), 3, "dim_vec must have length 3");
-    let dim  = dim_vec[0];
-    let dim2 = dim_vec[1];
-    let dim3 = dim_vec[2];
+    // assert_eq!(dim_vec.len(), 3, "dim_vec must have length 3");
     let k = 1;
-    let sk_bound= get_sk_bound(dim, bound, 128, &grp);
+    let sk_bound= get_sk_bound(dim[0], bound, 128, &grp);
+    let bound = Integer::from(bound);  
     
     let decomp = Decomp::new(n_decomp, &grp);
 
-    let x = gen_random_vector(dim, &Integer::from(bound), rng);
-    let f1 = Matrix::random_quadratic_tensored(dim, dim2, &Integer::from(bound), &grp.delta, rng);
-    let f2 = Matrix::random_quadratic_tensored(dim2, dim3, &Integer::from(bound), &grp.delta, rng);
-
+    let x = gen_random_vector(dim[0], &bound, rng);
     println!("x = {:?}", x);
-    println!("f1 = {:?}", f1);
-    println!("f2 = {:?}", f2);
 
-    let fx = eval_quadratic_multivariate(&x, &x, &f1);
-    let mut ffx = eval_quadratic_multivariate(&fx, &fx, &f2);
-    for i in 0..ffx.len() {
-        if ffx[i].clone().abs() > grp.n.clone() / Integer::from(2) {
-            println!(" ===== abort since ffx[{}] = {} > n = {} =====", i, ffx[i], grp.n);
-            return vec![Integer::from(-1); dim3]
+    let f_num = dim.len() - 1;
+    let mut f_origin = vec![Matrix::new(0, 0); f_num];
+    let mut f = vec![Matrix::new(0, 0); f_num];
+    for i in 0..f_num {
+        f_origin[i] = Matrix::random_quadratic_tensored_with_one_padded(
+            dim[i], 
+            dim[i+1], 
+            &bound,
+            &grp.delta, 
+            rng
+        );
+        
+        if i < f_num {
+            let mut unit_vector = Matrix::new(1, f_origin[i].cols);
+            unit_vector.set(0, f_origin[i].cols - 1, Integer::from(1));
+            f[i] = concatenate_row(&f_origin[i], &unit_vector);
         }
     }
 
@@ -68,127 +72,394 @@ fn run_protocol_start_to_end(
     println!("start protocol_setup");
     let start = SystemTime::now();
     let ((dcr_sk, dcr_pk), 
-        qfe_sk_init, 
-        qfe_sk_vec,
-        _qfe_sk_end,
+        qfe_sk,
     ) = protocol_setup(
-        vec![dim, dim2, dim3], 
-        0, 
+        &dim,
         k, 
         &sk_bound, 
         &grp, 
         rng);
     
-    let (h0_left, h0_right) = sample_h(dim, k, &grp.delta, rng);
-    let (h1_left, h1_right) = sample_h(dim2, k, &grp.delta, rng);
+    let mut h_left = vec![Matrix::new(0, 0); depth];
+    let mut h_right = vec![Matrix::new(0, 0); depth];
+    for i in 0..depth {
+        let (h_left_i, h_right_i) = sample_h(dim[i], k, &grp.n, rng);
+        h_left[i] = h_left_i;
+        h_right[i] = h_right_i;
+    }
+    let (gamma_left, gamma_right) = sample_gamma(dim[0], &grp.n, rng);
+    let time_setup = start.elapsed();
+    println!("Time elapsed in protocol_setup is: {:?}", time_setup);
 
-    let (gamma_left, gamma_right) = sample_gamma(dim, &grp.delta, rng);
+    println!("start protocol_keygen_dcr_to_qfe");
+    let start = SystemTime::now();
+    let (mat_ctxts, fk)
+    = protocol_keygen_dcr_to_qfe(
+        &dcr_sk, 
+        &qfe_sk[0],
+        &h_right[0], 
+        &gamma_left, 
+        &decomp, 
+        &grp, 
+        rng);
+    let time_keygen_dcr_to_qfe = start.elapsed();
+    println!("Time elapsed in protocol_keygen_dcr_to_qfe is: {:?}", time_keygen_dcr_to_qfe);
+
+
+    println!("start protocol_keygen_qfe_to_qfe");
+    let mut fk_qfe_to_qfe = vec![Matrix::new(0, 0); depth - 1];
+    let start = SystemTime::now();
+    for i in 0..fk_qfe_to_qfe.len() {
+        fk_qfe_to_qfe[i] = protocol_keygen_qfe_to_qfe(
+            &qfe_sk[i],
+            &qfe_sk[i + 1],
+            &h_right[i + 1],
+            &h_left[i],
+            &f[i],
+            &decomp,
+            &grp,
+            rng
+        );
+    }
+    let time_keygen_qfe_to_qfe = start.elapsed();
+    println!("Time elapsed in protocol_keygen_qfe_to_qfe is: {:?}", time_keygen_qfe_to_qfe);
+
+    
+    println!("start protocol_keygen_qfe_to_plain");
+    let start = SystemTime::now();
+    let mut fk_qfe_to_plain_test = vec![Matrix::new(0, 0); depth - 1];
+    for i in 0..(depth-1) {
+        fk_qfe_to_plain_test[i] = protocol_keygen_qfe_to_plain(
+            &qfe_sk[i], // changed
+            &h_left[i],
+            &f_origin[i],
+            &grp
+        );
+    }
+    println!("test gen done");
+    println!("depth = {}", depth);
+    println!("qfe_sk size = {}", qfe_sk.len());
+    println!("h_left size = {}", h_left.len());
+    println!("f size = {}", f.len());
+    let fk_qfe_to_plain = protocol_keygen_qfe_to_plain(
+        &qfe_sk[depth - 1],
+        &h_left[depth - 1],
+        &f_origin[depth - 1],
+        &grp
+    );
+    println!("fk_qfe_to_plain size = {} x {}", fk_qfe_to_plain.rows, fk_qfe_to_plain.cols);
+    let time_keygen_qfe_to_plain = start.elapsed();
+    println!("Time elapsed in protocol_keygen_qfe_to_plain is: {:?}", time_keygen_qfe_to_plain);
+
+    println!("start protocol_enc_init");
+    let start = SystemTime::now();
+    let ct0 = protocol_enc_init(&dcr_pk, &gamma_right, &x, &grp, rng);
+    let time_enc = start.elapsed();
+    println!("Time elapsed in protocol_enc_init is: {:?}", time_enc);
+    
+    let mut ct_vec = vec![vec![Integer::from(0);1]; depth];
+    println!("start protocol_dec_dcr_to_qfe");
+    let start = SystemTime::now();
+    ct_vec[0] = protocol_dec_dcr_to_qfe(
+        &ct0, 
+        &mat_ctxts,
+        &fk,
+        &decomp,
+        &grp
+    );
+    let time_dec_dcr_to_qfe = start.elapsed();
+    println!("Time elapsed in protocol_dec_dcr_to_qfe is: {:?}", time_dec_dcr_to_qfe);
+    
+    println!("start protocol_dec_qfe_to_qfe");
+    let start = SystemTime::now();
+    for i in 0..depth - 1 {
+        println!("ct_vec{} <- ct_vec{}", i + 1, i);
+        ct_vec[i + 1] = protocol_dec_qfe(
+            &ct_vec[i],
+            &fk_qfe_to_qfe[i],
+            dim[i] + k + 1,
+            2 * (dim[i] + k + 1) + 1,
+            &decomp,
+            &grp,
+            true,
+        );
+    }
+    let time_dec_qfe_to_qfe = start.elapsed();
+    println!("Time elapsed in protocol_dec_qfe_to_qfe is: {:?}", time_dec_qfe_to_qfe);
+    
+    println!("start protocol_dec_qfe_to_plain");
+    let mut val_end = vec![vec![Integer::from(0);1]; depth];
+    let start = SystemTime::now();
+    for i in 0..depth - 1 {
+        println!("i = {}", i);
+        val_end[i] = protocol_dec_qfe(
+            &ct_vec[i],
+            &fk_qfe_to_plain_test[i],
+            dim[i] + k + 1,
+            2 * (dim[i] + k + 1) + 1,
+            &decomp,
+            &grp,
+            false,
+        );
+    }
+    let val_end_final = protocol_dec_qfe(
+        &ct_vec[depth - 1],
+        &fk_qfe_to_plain,
+        dim[depth-1] + k + 1,
+        2 * (dim[depth-1] + k + 1) + 1,
+        &decomp,
+        &grp,
+        false,
+    );
+    let time_dec_qfe_to_plain = start.elapsed();
+    println!("Time elapsed in protocol_dec_qfe_to_plain is: {:?}", time_dec_qfe_to_plain);
+    val_end[depth - 1] = val_end_final.clone();
+
+    println!("reprint inputs");
+    println!("x: {:?}", x);
+    for i in 0..f_num {
+        println!("f[{}] = {}", i, f[i]);
+    }
+    // print f^i(x)
+    let mut fx = x.clone();
+    fx.push(Integer::from(1));
+    println!("x = {:?}", fx);
+    for i in 0..f_num {
+        fx = eval_quadratic_multivariate(&fx, &fx, &f[i]);
+        println!("f^{}(x) = {:?}", i, fx);
+        println!("eval = {:?}", val_end[i]);
+    }
+    println!("eval result: {:?}", val_end_final);
+
+    println!(" === Time summaries ===");
+    println!("protocol_setup: {:?}", time_setup);
+    println!("protocol_keygen_dcr_to_qfe: {:?}", time_keygen_dcr_to_qfe);
+    println!("protocol_enc_init: {:?}", time_enc);
+    println!("protocol_keygen_qfe_to_qfe: {:?}", time_keygen_qfe_to_qfe);
+    println!("protocol_keygen_qfe_to_plain: {:?}", time_keygen_qfe_to_plain);
+    println!("protocol_dec_dcr_to_qfe: {:?}", time_dec_dcr_to_qfe);
+    println!("protocol_dec_qfe_to_qfe: {:?}", time_dec_qfe_to_qfe);
+    println!("protocol_dec_qfe_to_plain: {:?}", time_dec_qfe_to_plain);
+    println!("");
+    println!("SETUP: {:?}", time_setup.unwrap());
+    println!("KEYGEN: {:?}", time_keygen_dcr_to_qfe.unwrap() + time_keygen_qfe_to_qfe.unwrap() + time_keygen_qfe_to_plain.unwrap());
+    println!("ENC: {:?}", time_enc.unwrap());
+    println!("DEC: {:?}", time_dec_dcr_to_qfe.unwrap() + time_dec_qfe_to_qfe.unwrap() + time_dec_qfe_to_plain.unwrap());
+
+    val_end_final
+}
+
+fn run_protocol_with_ml_data(
+    dataset: &str,
+    bit_len: u64,
+    scale: i64,
+    n_decomp: usize,
+) {
+    let mut rng = RandState::new(); // Create a single RandState object
+    let d = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .expect("Duration since UNIX_EPOCH failed");
+    rng.seed(&Integer::from(d.as_secs()));
+
+    let grp = Group::new(bit_len); // Initialize the group        
+    let decomp = Decomp::new(n_decomp, &grp);
+
+    println!("=== run {} dataset with bit_len {} ===", dataset, bit_len);
+    let file_x_test: String = format!("plain_model/{}/X_test.csv", dataset);
+    let file_layer1_weight = format!("plain_model/{}/input_layer.weight.csv", dataset);
+    let file_layer1_bias = format!("plain_model/{}/input_layer.bias.csv", dataset);
+    let file_layer2_weight = format!("plain_model/{}/output_layer.weight.csv", dataset);
+    let file_layer2_bias = format!("plain_model/{}/output_layer.bias.csv", dataset);
+
+    let x_test = read_matrix(&file_x_test, scale);
+    let layer1_weight = read_matrix(&file_layer1_weight, scale);
+    let layer2_weight = read_matrix(&file_layer2_weight, scale);
+    let mut layer1_bias = read_matrix(&file_layer1_bias, scale);
+    let mut layer2_bias = read_matrix(&file_layer2_bias, scale);
+
+    let scale_int = Integer::from(scale);
+    let scale_int_pow_1 = scale_int.clone().pow(1);
+    let scale_int_pow_4 = scale_int.clone().pow(4);
+    let scale_int_pow_10 = scale_int.clone().pow(10);
+    layer1_bias.mul_scalar_inplace(&scale_int_pow_1); // scale * scale^1
+    layer2_bias.mul_scalar_inplace(&scale_int_pow_4); // scale * scale^4
+
+    // we only test the first row of X_test data
+    let x = x_test.get_row(0);
+
+    let f1_notensor = concatenate_col(&layer1_weight, &layer1_bias);
+    let f1_no_one = f1_notensor.gen_tensored_matrix(&grp.delta);
+    let mut vec_one = vec![Integer::from(0); f1_no_one.cols];
+    vec_one[f1_no_one.cols - 1] = Integer::from(1);
+    let f1 = concatenate_vec_row(&f1_no_one, &vec_one);
+
+    let f2_notensor = concatenate_col(&layer2_weight, &layer2_bias);
+    println!("f2_notensor size = {} x {}", f2_notensor.rows, f2_notensor.cols);
+    let f2 = f2_notensor.gen_tensored_matrix(&grp.delta);
+    println!("f2 size = {} x {}", f2.rows, f2.cols);
+
+
+    println!("scale = {}", scale);
+    println!("x = {:?}", x);
+    println!("f1_notensor = {}", f1_notensor);
+    println!("f2_notensor = {}", f2_notensor);
+
+    assert_eq!((x.len() + 1) * (x.len() + 1), f1.cols, "dim1 is not matched between x and f1"); // dim
+    assert_eq!(f1.rows * f1.rows, f2.cols, "dim2 is not matched between f1 and f2"); // dim2
+    let dim = x.len();
+    let dim2 = f1.rows - 1;
+    let dim3 = f2.rows;
+    let k = 1; // fixed
+    let sk_bound = get_sk_bound(dim, 10 * scale as usize, 128, &grp);
+
+    // Perform setup
+    println!("start protocol_setup");
+    let start = SystemTime::now();
+    let ((dcr_sk, dcr_pk),
+        qfe_sk,
+    ) = protocol_setup(
+        &vec![dim, dim2, dim3],
+        k,
+        &sk_bound,
+        &grp,
+        &mut rng);
+    println!("protocol setup done?");
+
+    println!("dim, dim2, dim3 = {}, {}, {}", dim, dim2, dim3);
+    
+    let (h0_left, h0_right) = sample_h(dim, k, &grp.delta, &mut rng);
+    let (h1_left, h1_right) = sample_h(dim2, k, &grp.delta, &mut rng);
+    println!("h0_left size = {} x {}", h0_left.rows, h0_left.cols);
+    println!("h0_right size = {} x {}", h0_right.rows, h0_right.cols);
+    println!("h1_left size = {} x {}", h1_left.rows, h1_left.cols);
+    println!("h1_right size = {} x {}", h1_right.rows, h1_right.cols);
+
+    let (gamma_left, gamma_right) = sample_gamma(dim, &grp.delta, &mut rng);
+    println!("gamma_left size = {} x {}", gamma_left.rows, gamma_left.cols);
+    println!("gamma_right size = {} x {}", gamma_right.rows, gamma_right.cols);
     let time_setup = start.elapsed();
     println!("Time elapsed in protocol_setup is: {:?}", time_setup);
 
     println!("start protocol_keygen_switch");
-    let start = SystemTime::now();
-    let (
-        (switch_key_x, switch_key_y, switch_key_h),
-        (switch_key_dcr_x, switch_key_dcr_y, switch_key_dcr_h),
-    ) = protocol_keygen_switch(
-        &qfe_sk_init,
-        &dcr_sk, 
-        &h0_right, 
-        &gamma_left, 
-        dim, 
-        k, 
-        &decomp, 
-        &grp, 
-        rng);
+    let (mat_ctxts, fk)
+        = protocol_keygen_dcr_to_qfe(
+            &dcr_sk, 
+            &qfe_sk[0],
+            &h0_right, 
+            &gamma_left, 
+            &decomp, 
+            &grp, 
+            &mut rng
+        );
+    let end = start.elapsed();
     let time_keygen_switch = start.elapsed();
     println!("Time elapsed in protocol_keygen_switch is: {:?}", time_keygen_switch);
 
     println!("start protocol_enc_init");
     let start = SystemTime::now();
-    let ctxt_x = protocol_enc_init(&dcr_pk, &gamma_right, &x, &grp, rng);
+    let ct0 = protocol_enc_init(&dcr_pk, &gamma_right, &x, &grp, &mut rng);
     let time_enc = start.elapsed();
     println!("Time elapsed in protocol_enc_init is: {:?}", time_enc);
-    
+
     println!("start protocol_keyswitch");
     let start = SystemTime::now();
     //  run keyswitch
-    let (ct_out_x, ct_out_y, ct_out_h) = protocol_keyswitch(
-        &ctxt_x, 
-        (&switch_key_x, &switch_key_y, &switch_key_h),
-        (&switch_key_dcr_x, &switch_key_dcr_y, &switch_key_dcr_h),
+    let ct0 = protocol_dec_dcr_to_qfe(
+        &ct0, 
+        &mat_ctxts,
+        &fk,
         &decomp,
         &grp
     );
     let time_protocol_keyswitch = start.elapsed();
     println!("Time elapsed in protocol_keyswitch is: {:?}", time_protocol_keyswitch);
 
-    println!("start protocol_keygen_i");
+    println!("start protocol_keygen_qfe_to_qfe");
     let start = SystemTime::now();
-    let ((qfe_b_x, qfe_b_y, qfe_b_h), 
-         (sk_f_mat_x, sk_f_mat_y, sk_f_mat_h), 
-         (sk_red_mat_x, sk_red_mat_y, sk_red_mat_h),
-        ) = protocol_keygen_i(
-            &qfe_sk_vec[0], 
-            &qfe_sk_init, 
-            &h1_right, 
-            &h0_left, 
-            dim2, 
-            k, 
-            &f1, 
-            &decomp, 
-            &grp, 
-            rng);
+    let fk_qfe_to_qfe = protocol_keygen_qfe_to_qfe(
+        &qfe_sk[0],
+        &qfe_sk[1],
+        &h1_right,
+        &h0_left,
+        &f1,
+        &decomp,
+        &grp,
+        &mut rng
+    );
     let time_protocol_keygen_i = start.elapsed();
     println!("Time elapsed in protocol_keygen_i is: {:?}", time_protocol_keygen_i);
 
     println!("start protocol_dec_i");
     let start = SystemTime::now();
-    let (ct_out_x2, ct_out_y2, ct_out_h2) = protocol_dec_i(
-        (&ct_out_x, &ct_out_y, &ct_out_h),
-        (&qfe_b_x, &qfe_b_y, &qfe_b_h),
-        (&sk_f_mat_x, &sk_f_mat_y, &sk_f_mat_h),
-        (&sk_red_mat_x, &sk_red_mat_y, &sk_red_mat_h),
-        dim,
-        2 * dim + 1,
+    // let (ct_out_x2, ct_out_y2, ct_out_h2) = protocol_dec_i(
+    //     (&ct_out_x, &ct_out_y, &ct_out_h),
+    //     (&qfe_b_x, &qfe_b_y, &qfe_b_h),
+    //     (&sk_f_mat_x, &sk_f_mat_y, &sk_f_mat_h),
+    //     (&sk_red_mat_x, &sk_red_mat_y, &sk_red_mat_h),
+    //     &decomp,
+    //     &grp
+    // );
+    let ct0 = protocol_dec_qfe(
+        &ct0,
+        &fk_qfe_to_qfe,
+        dim + k + 1,
+        2 * (dim + k + 1) + 1,
         &decomp,
-        &grp
+        &grp,
+        true,
     );
     let time_protocol_dec_i = start.elapsed();
     println!("Time elapsed in protocol_dec_i is: {:?}", time_protocol_dec_i);
 
     println!("start protocol_keygen_end");
     let start = SystemTime::now();
-    let (sk_f_mat, sk_f_red) = protocol_keygen_end(&qfe_sk_vec[0], &h1_left, &f2, &grp);
+    // let (sk_f_mat, sk_f_red) = protocol_keygen_end(&qfe_sk_vec[0], &h1_left, &f2, &decomp, &grp);
+    let fk_qfe_to_plain = protocol_keygen_qfe_to_plain(
+        &qfe_sk[1], // changed
+        &h1_left,
+        &f2,
+        &grp
+    );
+    
     let time_protocol_keygen_end = start.elapsed();
     println!("Time elapsed in protocol_keygen_end is: {:?}", time_protocol_keygen_end);
 
     println!("start protocol_dec_end");
     let start = SystemTime::now();
-    let val_end = protocol_dec_end(
-        (&ct_out_x2, &ct_out_y2, &ct_out_h2),
-        (&sk_f_mat, &sk_f_red),
+    // let val_end = protocol_dec_end(
+    //     (&ct_out_x2, &ct_out_y2, &ct_out_h2),
+    //     (&sk_f_mat, &sk_f_red),
+    //     &decomp,
+    //     &grp
+    // );
+    let val_end = protocol_dec_qfe(
+        &ct0,
+        &fk_qfe_to_plain,
+        dim2 + k + 1,
+        2 * (dim2 + k + 1) + 1,
         &decomp,
-        dim,
-        2 * dim + 1,
-        &grp
+        &grp,
+        false,
     );
     let time_protocol_dec_end = start.elapsed();
     println!("Time elapsed in protocol_dec_end is: {:?}", time_protocol_dec_end);
+    
+    let val_scaled = val_end.iter().map(|x| x.clone() / scale_int_pow_10.clone()).collect::<Vec<Integer>>();
 
     println!("reprint inputs");
+    let mut x1 = x.clone();
+    x1.push(Integer::from(1));
     println!("x: {:?}", x);
-    println!("f1: {:?}", f1);
-    println!("f2: {:?}", f2);
+    println!("f1: {}", f1);
+    println!("f2: {}", f2);
+    let fx = eval_quadratic_multivariate(&x1, &x1, &f1);
     println!("f1(x) = {:?}", fx);
+    let mut ffx = eval_quadratic_multivariate(&fx, &fx, &f2);
     println!("f2(f1(x)) = {:?}", ffx);
     vec_mod(&mut ffx, &grp.n);
     println!("real mod n = {:?}", ffx);
-    // vec_mod(&mut val_end, &grp.n);
     println!("eval result: {:?}", val_end);
-    for i in 0..val_end.len() {
-        assert_eq!(val_end[i], ffx[i], "dec_end is not matched with eval result in th element");
-    }
+    println!("scaled result: {:?}", val_scaled);
 
     println!(" === Time summaries ===");
     println!("protocol_setup: {:?}", time_setup);
@@ -204,207 +475,6 @@ fn run_protocol_start_to_end(
     println!("KEYGEN: {:?}", time_keygen_switch.unwrap() + time_protocol_keygen_i.unwrap() + time_protocol_keygen_end.unwrap());
     println!("ENC: {:?}", time_enc.unwrap());
     println!("DEC: {:?}", time_protocol_keyswitch.unwrap() + time_protocol_dec_i.unwrap() + time_protocol_dec_end.unwrap());
-
-    val_end
-}
-fn run_protocol_with_ml_data(
-    dataset: &str,
-    bit_len: u64,
-    scale: i64,
-    n_decomp: usize,
-) {
-    // let mut rng = RandState::new(); // Create a single RandState object
-    // let d = SystemTime::now()
-    //     .duration_since(SystemTime::UNIX_EPOCH)
-    //     .expect("Duration since UNIX_EPOCH failed");
-    // rng.seed(&Integer::from(d.as_secs()));
-
-    // let grp = Group::new(bit_len); // Initialize the group        
-    // let decomp = Decomp::new(n_decomp, &grp);
-
-    // println!("=== run {} dataset with bit_len {} ===", dataset, bit_len);
-    // let file_x_test: String = format!("plain_model/{}/X_test.csv", dataset);
-    // let file_layer1_weight = format!("plain_model/{}/input_layer.weight.csv", dataset);
-    // let file_layer1_bias = format!("plain_model/{}/input_layer.bias.csv", dataset);
-    // let file_layer2_weight = format!("plain_model/{}/output_layer.weight.csv", dataset);
-    // let file_layer2_bias = format!("plain_model/{}/output_layer.bias.csv", dataset);
-
-    // let x_test = read_matrix(&file_x_test, scale);
-    // let layer1_weight = read_matrix(&file_layer1_weight, scale);
-    // let layer2_weight = read_matrix(&file_layer2_weight, scale);
-    // let mut layer1_bias = read_matrix(&file_layer1_bias, scale);
-    // let mut layer2_bias = read_matrix(&file_layer2_bias, scale);
-
-    // let scale_int = Integer::from(scale);
-    // let scale_int_pow_1 = scale_int.clone().pow(1);
-    // let scale_int_pow_4 = scale_int.clone().pow(4);
-    // let scale_int_pow_10 = scale_int.clone().pow(10);
-    // layer1_bias.mul_scalar_inplace(&scale_int_pow_1); // scale * scale^1
-    // layer2_bias.mul_scalar_inplace(&scale_int_pow_4); // scale * scale^4
-
-    // // we only test the first row of X_test data
-    // let mut x = x_test.get_row(0);
-    // x.push(Integer::from(1));
-
-    // let f1_notensor = concatenate_col(&layer1_weight, &layer1_bias);
-    // let f1_no_one = f1_notensor.gen_tensored_matrix(&grp.delta);
-    // let mut vec_one = vec![Integer::from(0); f1_no_one.cols];
-    // vec_one[f1_no_one.cols - 1] = Integer::from(1);
-    // let f1 = concatenate_vec_row(&f1_no_one, &vec_one);
-
-    // let f2_notensor = concatenate_col(&layer2_weight, &layer2_bias);
-    // let f2 = f2_notensor.gen_tensored_matrix(&grp.delta);
-
-    // println!("scale = {}", scale);
-    // println!("x = {:?}", x);
-    // println!("f1_notensor = {}", f1_notensor);
-    // println!("f2_notensor = {}", f2_notensor);
-
-    // assert_eq!(x.len() * x.len(), f1.cols, "dim1 is not matched between x and f1"); // dim
-    // assert_eq!(f1.rows * f1.rows(), f2.cols, "dim2 is not matched between f1 and f2"); // dim2
-    // let dim = x.len();
-    // let dim2 = f1.rows;
-    // let dim3 = f2.rows;
-    // let k = 1; // fixed
-    // let sk_bound = get_sk_bound(dim, 10 * scale as usize, 128, &grp);
-
-    // // Perform setup
-    // println!("start protocol_setup");
-    // let start = SystemTime::now();
-    // let ((dcr_sk, dcr_pk),
-    //     qfe_sk_init,
-    //     qfe_sk_vec,
-    //     _qfe_sk_end,
-    // ) = protocol_setup(
-    //     vec![dim, dim2, dim3],
-    //     0,
-    //     k,
-    //     &sk_bound,
-    //     &grp,
-    //     &mut rng);
-    // println!("protocol setup done?");
-    
-    // let (h0_left, h0_right) = sample_h(dim, k, &grp.delta, &mut rng);
-    // let (h1_left, h1_right) = sample_h(dim2, k, &grp.delta, &mut rng);
-    // let (gamma_left, gamma_right) = sample_gamma(dim, dim, &grp.delta, &mut rng);
-    // let time_setup = start.elapsed();
-    // println!("Time elapsed in protocol_setup is: {:?}", time_setup);
-
-    // println!("start protocol_keygen_switch");
-    // let start = SystemTime::now();
-    // let (
-    //     (switch_key_x, switch_key_y, switch_key_h),
-    //     (switch_key_dcr_x, switch_key_dcr_y, switch_key_dcr_h),
-    // ) = protocol_keygen_switch(
-    //     &qfe_sk_init,
-    //     &dcr_sk,
-    //     &h0_right,
-    //     &gamma_left,
-    //     dim,
-    //     k,
-    //     &decomp,
-    //     &grp,
-    //     &mut rng);
-    // let time_keygen_switch = start.elapsed();
-    // println!("Time elapsed in protocol_keygen_switch is: {:?}", time_keygen_switch);
-
-    // println!("start protocol_enc_init");
-    // let start = SystemTime::now();
-    // let ctxt_x = protocol_enc_init(&dcr_pk, &gamma_right, &x, &grp, &mut rng);
-    // let time_enc = start.elapsed();
-    // println!("Time elapsed in protocol_enc_init is: {:?}", time_enc);
-
-    // println!("start protocol_keyswitch");
-    // let start = SystemTime::now();
-    // //  run keyswitch
-    // let (ct_out_x, ct_out_y, ct_out_h) = protocol_keyswitch(
-    //     &ctxt_x,
-    //     (&switch_key_x, &switch_key_y, &switch_key_h),
-    //     (&switch_key_dcr_x, &switch_key_dcr_y, &switch_key_dcr_h),
-    //     &decomp,
-    //     &grp
-    // );
-    // let time_protocol_keyswitch = start.elapsed();
-    // println!("Time elapsed in protocol_keyswitch is: {:?}", time_protocol_keyswitch);
-
-    // println!("start protocol_keygen_i");
-    // let start = SystemTime::now();
-    // let ((qfe_b_x, qfe_b_y, qfe_b_h),
-    //      (sk_f_mat_x, sk_f_mat_y, sk_f_mat_h),
-    //      (sk_red_mat_x, sk_red_mat_y, sk_red_mat_h),
-    // ) = protocol_keygen_i(
-    //     &qfe_sk_vec[0],
-    //     &qfe_sk_init,
-    //     &h1_right,
-    //     &h0_left,
-    //     dim2,
-    //     k,
-    //     &f1,
-    //     &decomp,
-    //     &grp,
-    //     &mut rng);
-    // let time_protocol_keygen_i = start.elapsed();
-    // println!("Time elapsed in protocol_keygen_i is: {:?}", time_protocol_keygen_i);
-
-    // println!("start protocol_dec_i");
-    // let start = SystemTime::now();
-    // let (ct_out_x2, ct_out_y2, ct_out_h2) = protocol_dec_i(
-    //     (&ct_out_x, &ct_out_y, &ct_out_h),
-    //     (&qfe_b_x, &qfe_b_y, &qfe_b_h),
-    //     (&sk_f_mat_x, &sk_f_mat_y, &sk_f_mat_h),
-    //     (&sk_red_mat_x, &sk_red_mat_y, &sk_red_mat_h),
-    //     &decomp,
-    //     &grp
-    // );
-    // let time_protocol_dec_i = start.elapsed();
-    // println!("Time elapsed in protocol_dec_i is: {:?}", time_protocol_dec_i);
-
-    // println!("start protocol_keygen_end");
-    // let start = SystemTime::now();
-    // let (sk_f_mat, sk_f_red) = protocol_keygen_end(&qfe_sk_vec[0], &h1_left, &f2, &decomp, &grp);
-    // let time_protocol_keygen_end = start.elapsed();
-    // println!("Time elapsed in protocol_keygen_end is: {:?}", time_protocol_keygen_end);
-
-    // println!("start protocol_dec_end");
-    // let start = SystemTime::now();
-    // let val_end = protocol_dec_end(
-    //     (&ct_out_x2, &ct_out_y2, &ct_out_h2),
-    //     (&sk_f_mat, &sk_f_red),
-    //     &decomp,
-    //     &grp
-    // );
-    // let time_protocol_dec_end = start.elapsed();
-    // println!("Time elapsed in protocol_dec_end is: {:?}", time_protocol_dec_end);
-    
-    // let val_scaled = val_end.iter().map(|x| x.clone() / scale_int_pow_10.clone()).collect::<Vec<Integer>>();
-
-    // println!("reprint inputs");
-    // println!("x: {:?}", x);
-    // println!("f1: {:?}", f1);
-    // println!("f2: {:?}", f2);
-    // let fx = eval_quadratic_multivariate(&x, &x, &f1);
-    // println!("f1(x) = {:?}", fx);
-    // let mut ffx = eval_quadratic_multivariate(&fx, &fx, &f2);
-    // println!("f2(f1(x)) = {:?}", ffx);
-    // vec_mod(&mut ffx, &grp.n);
-    // println!("real mod n = {:?}", ffx);
-    // println!("eval result: {:?}", val_end);
-    // println!("scaled result: {:?}", val_scaled);
-
-    // println!(" === Time summaries ===");
-    // println!("protocol_setup: {:?}", time_setup);
-    // println!("protocol_keygen_switch: {:?}", time_keygen_switch);
-    // println!("protocol_enc_init: {:?}", time_enc);
-    // println!("protocol_keyswitch: {:?}", time_protocol_keyswitch);
-    // println!("protocol_keygen_i: {:?}", time_protocol_keygen_i);
-    // println!("protocol_dec_i: {:?}", time_protocol_dec_i);
-    // println!("protocol_keygen_end: {:?}", time_protocol_keygen_end);
-    // println!("protocol_dec_end: {:?}", time_protocol_dec_end);
-    // println!("");
-    // println!("SETUP: {:?}", time_setup.unwrap());
-    // println!("KEYGEN: {:?}", time_keygen_switch.unwrap() + time_protocol_keygen_i.unwrap() + time_protocol_keygen_end.unwrap());
-    // println!("ENC: {:?}", time_enc.unwrap());
-    // println!("DEC: {:?}", time_protocol_keyswitch.unwrap() + time_protocol_dec_i.unwrap() + time_protocol_dec_end.unwrap());
 }
 
 fn main() {
@@ -422,12 +492,13 @@ fn main() {
 
     match args.target_algorithm.as_str() {
         "protocol" => {
-            let dim0 = args.dim0;
-            let dim1 = args.dim1;
-            let dim2 = args.dim2;
             let n_try = args.n_try;
             let bound = args.bound;
-            let dim_vec = vec![dim0, dim1, dim2];
+            let dim_vec = if args.dim.len() == 0 {
+                vec![5, 4, 3]
+            } else {
+                args.dim
+            };
             let mut outputs = Matrix::new(n_try, dim_vec[dim_vec.len()-1]);
             for i in 0..n_try {
                 println!("  ====================== i = {} ======================", i);

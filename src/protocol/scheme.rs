@@ -14,9 +14,8 @@ use crate::qfe::scheme::{divide_vector_for_functional_key, get_ctxt_len, get_fun
 use crate::ipfe::scheme::{ipfe_enc, ipfe_keygen};
 use std::time::SystemTime;
 
-pub fn protocol_setup_new(
-    dim_vec: Vec<usize>,
-    depth: usize,
+pub fn protocol_setup(
+    dim_vec: &Vec<usize>,
     k: usize,
     sk_bound: &Integer,
     grp: &Group,
@@ -25,12 +24,10 @@ pub fn protocol_setup_new(
     (Vec<Integer>, Vec<Integer>),
     Vec<QfeSk>,
 ) {
-    let dim = dim_vec[0];
-    let (dcr_sk, dcr_pk) = dcr_setup(2 * dim + 1, sk_bound, grp, rng);
+    let (dcr_sk, dcr_pk) = dcr_setup(2 * dim_vec[0] + 1, sk_bound, grp, rng);
     let mut qfe_sk = Vec::new();
-    for i in 0..depth {
-        let dim = dim_vec[i];
-        qfe_sk.push(qfe_setup(grp, dim + k + 1, 2 * (dim + k + 1) + 1, rng));
+    for i in 0..dim_vec.len() - 1  {
+        qfe_sk.push(qfe_setup(grp, dim_vec[i] + k + 1, 2 * (dim_vec[i] + k + 1) + 1, rng));
     }
     (
         (dcr_sk, dcr_pk),
@@ -88,6 +85,9 @@ pub fn protocol_keygen_qfe_to_qfe(
 ) -> Matrix {
     // function: h_right * f * (hm_left tensor hm_left)
     let hmhm = Matrix::tensor_product(&hm_left, &hm_left, &grp.delta);
+    println!("h_right = {} x {}", h_right.rows, h_right.cols);
+    println!("f = {} x {}", f.rows, f.cols);
+    println!("hmhm = {} x {}", hmhm.rows, hmhm.cols);
     let mut total_mat: Matrix = h_right * &(f * &hmhm);
     total_mat.mod_inplace(&grp.n);
 
@@ -117,6 +117,8 @@ pub fn protocol_keygen_qfe_to_plain(
     grp: &Group,
 ) -> Matrix {
     let hmhm = Matrix::tensor_product(&hm_left, &hm_left, &grp.delta);
+    println!("hmhm size = {} x {}", hmhm.rows, hmhm.cols);
+    println!("f size = {} x {}", f.rows, f.cols);
     let mut total_mat = f * &hmhm;
     total_mat.mod_inplace(&grp.n);
 

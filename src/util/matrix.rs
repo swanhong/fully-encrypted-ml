@@ -91,6 +91,24 @@ impl Matrix {
         matrix
     }
 
+    pub fn random_quadratic_tensored_with_one_padded(
+        dim_input: usize,
+        dim_output: usize,
+        bound: &Integer,
+        modulo: &Integer,
+        rng: &mut RandState<'_>,
+    ) -> Matrix {
+        let mut matrix = Matrix::new(dim_output, (dim_input + 1) * (dim_input + 1));
+
+        for i in 0..dim_output {
+            let mut f = gen_random_vector(dim_input, bound, rng);
+            f.push(Integer::from(1));
+            let f_tensor = tensor_product_vecs(&f, &f, &modulo);
+            matrix.set_row(i, &f_tensor);
+        }
+        matrix
+    }
+
     pub fn clone(&self) -> Matrix {
         let mut matrix = Matrix::new(self.rows, self.cols);
         for i in 0..self.rows {
