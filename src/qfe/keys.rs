@@ -29,13 +29,6 @@ impl QfeSk {
         let (d_x, d_x_inv, d_x_null) = generate_right_inverse_space(dim, dim + q, &modulo, rng);
         let (d_y, d_y_inv, d_y_null) = generate_right_inverse_space(dim, dim + q, &modulo, rng);
 
-        // remove randomness for testing
-        // println!(" !!!!! REMOVE RANDOM FOR TESTING in qfe key !!!!! ");
-        // let v = Matrix::new(dim, 2);
-        // let w = Matrix::new(dim, 2);
-        // let (d_x, d_x_inv, d_x_null) = generate_right_inverse_space_trivial(dim, dim + q, &modulo, rng);
-        // let (d_y, d_y_inv, d_y_null) = generate_right_inverse_space_trivial(dim, dim + q, &modulo, rng);
-
         let i_dim = Matrix::get_identity(dim);
 
         let v_t = v.transpose();

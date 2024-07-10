@@ -22,10 +22,6 @@ pub fn dcr_setup(
         sk[i] -= sk_bound;
     }
 
-    // remove random for test
-    // println!(" !!!!! REMOVE RANDOM FOR TESTING in dcr setup !!!!! ");
-    // sk = vec![Integer::from(0); dim];
-
     let pk = vec_exp_with_base(&grp.g, &sk, &grp.n_sq);
 
     (sk, pk)

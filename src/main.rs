@@ -17,8 +17,6 @@ use util::arguments::Argument;
 use std::time::SystemTime;
 use crate::protocol::scheme::*;
 use crate::util::group::Group;
-use crate::protocol::algorithm::{sample_h_wo_padding, sample_gamma_wo_padding};
-use crate::util::vector::tensor_product_vecs;
 use crate::util::matrix::{Matrix, eval_quadratic_multivariate, concatenate_row,  concatenate_col, concatenate_vec_row};
 use crate::util::vector::{gen_random_vector, vec_mod};
 use crate::util::decomp::Decomp;
@@ -37,9 +35,6 @@ fn run_protocol_start_to_end(
 
     let grp = Group::new(bit_len); // Initialize the group    
     let depth = dim.len() - 1;  
-    // println!("{}", grp);
-    
-    // assert_eq!(dim_vec.len(), 3, "dim_vec must have length 3");
     let k = 1;
     let sk_bound= get_sk_bound(dim[0], bound, 128, &grp);
     let bound = Integer::from(bound);  
@@ -47,7 +42,6 @@ fn run_protocol_start_to_end(
     let decomp = Decomp::new(n_decomp, &grp);
 
     let x = gen_random_vector(dim[0], &bound, rng);
-    println!("x = {:?}", x);
 
     let f_num = dim.len() - 1;
     let mut f_origin = vec![Matrix::new(0, 0); f_num];
@@ -127,20 +121,15 @@ fn run_protocol_start_to_end(
     
     println!("start protocol_keygen_qfe_to_plain");
     let start = SystemTime::now();
-    let mut fk_qfe_to_plain_test = vec![Matrix::new(0, 0); depth - 1];
-    for i in 0..(depth-1) {
-        fk_qfe_to_plain_test[i] = protocol_keygen_qfe_to_plain(
-            &qfe_sk[i], // changed
-            &h_left[i],
-            &f_origin[i],
-            &grp
-        );
-    }
-    println!("test gen done");
-    println!("depth = {}", depth);
-    println!("qfe_sk size = {}", qfe_sk.len());
-    println!("h_left size = {}", h_left.len());
-    println!("f size = {}", f.len());
+    // let mut fk_qfe_to_plain_test = vec![Matrix::new(0, 0); depth - 1];
+    // for i in 0..(depth-1) {
+    //     fk_qfe_to_plain_test[i] = protocol_keygen_qfe_to_plain(
+    //         &qfe_sk[i], // changed
+    //         &h_left[i],
+    //         &f_origin[i],
+    //         &grp
+    //     );
+    // }
     let fk_qfe_to_plain = protocol_keygen_qfe_to_plain(
         &qfe_sk[depth - 1],
         &h_left[depth - 1],
@@ -188,20 +177,20 @@ fn run_protocol_start_to_end(
     println!("Time elapsed in protocol_dec_qfe_to_qfe is: {:?}", time_dec_qfe_to_qfe);
     
     println!("start protocol_dec_qfe_to_plain");
-    let mut val_end = vec![vec![Integer::from(0);1]; depth];
     let start = SystemTime::now();
-    for i in 0..depth - 1 {
-        println!("i = {}", i);
-        val_end[i] = protocol_dec_qfe(
-            &ct_vec[i],
-            &fk_qfe_to_plain_test[i],
-            dim[i] + k + 1,
-            2 * (dim[i] + k + 1) + 1,
-            &decomp,
-            &grp,
-            false,
-        );
-    }
+    // let mut val_end = vec![vec![Integer::from(0);1]; depth];
+    // for i in 0..depth - 1 {
+    //     println!("i = {}", i);
+    //     val_end[i] = protocol_dec_qfe(
+    //         &ct_vec[i],
+    //         &fk_qfe_to_plain_test[i],
+    //         dim[i] + k + 1,
+    //         2 * (dim[i] + k + 1) + 1,
+    //         &decomp,
+    //         &grp,
+    //         false,
+    //     );
+    // }
     let val_end_final = protocol_dec_qfe(
         &ct_vec[depth - 1],
         &fk_qfe_to_plain,
@@ -213,7 +202,7 @@ fn run_protocol_start_to_end(
     );
     let time_dec_qfe_to_plain = start.elapsed();
     println!("Time elapsed in protocol_dec_qfe_to_plain is: {:?}", time_dec_qfe_to_plain);
-    val_end[depth - 1] = val_end_final.clone();
+    // val_end[depth - 1] = val_end_final.clone();
 
     println!("reprint inputs");
     println!("x: {:?}", x);
@@ -227,7 +216,7 @@ fn run_protocol_start_to_end(
     for i in 0..f_num {
         fx = eval_quadratic_multivariate(&fx, &fx, &f[i]);
         println!("f^{}(x) = {:?}", i, fx);
-        println!("eval = {:?}", val_end[i]);
+        // println!("eval = {:?}", val_end[i]);
     }
     println!("eval result: {:?}", val_end_final);
 
@@ -329,18 +318,12 @@ fn run_protocol_with_ml_data(
     
     let (h0_left, h0_right) = sample_h(dim, k, &grp.delta, &mut rng);
     let (h1_left, h1_right) = sample_h(dim2, k, &grp.delta, &mut rng);
-    println!("h0_left size = {} x {}", h0_left.rows, h0_left.cols);
-    println!("h0_right size = {} x {}", h0_right.rows, h0_right.cols);
-    println!("h1_left size = {} x {}", h1_left.rows, h1_left.cols);
-    println!("h1_right size = {} x {}", h1_right.rows, h1_right.cols);
 
     let (gamma_left, gamma_right) = sample_gamma(dim, &grp.delta, &mut rng);
-    println!("gamma_left size = {} x {}", gamma_left.rows, gamma_left.cols);
-    println!("gamma_right size = {} x {}", gamma_right.rows, gamma_right.cols);
     let time_setup = start.elapsed();
     println!("Time elapsed in protocol_setup is: {:?}", time_setup);
 
-    println!("start protocol_keygen_switch");
+    println!("start protocol_keygen_dcr_to_qfe");
     let (mat_ctxts, fk)
         = protocol_keygen_dcr_to_qfe(
             &dcr_sk, 
@@ -351,9 +334,8 @@ fn run_protocol_with_ml_data(
             &grp, 
             &mut rng
         );
-    let end = start.elapsed();
-    let time_keygen_switch = start.elapsed();
-    println!("Time elapsed in protocol_keygen_switch is: {:?}", time_keygen_switch);
+    let time_keygen_dcr_to_qfe = start.elapsed();
+    println!("Time elapsed in protocol_keygen_dcr_to_qfe is: {:?}", time_keygen_dcr_to_qfe);
 
     println!("start protocol_enc_init");
     let start = SystemTime::now();
@@ -361,7 +343,7 @@ fn run_protocol_with_ml_data(
     let time_enc = start.elapsed();
     println!("Time elapsed in protocol_enc_init is: {:?}", time_enc);
 
-    println!("start protocol_keyswitch");
+    println!("start protocol_dec_dcr_to_qfe");
     let start = SystemTime::now();
     //  run keyswitch
     let ct0 = protocol_dec_dcr_to_qfe(
@@ -371,8 +353,8 @@ fn run_protocol_with_ml_data(
         &decomp,
         &grp
     );
-    let time_protocol_keyswitch = start.elapsed();
-    println!("Time elapsed in protocol_keyswitch is: {:?}", time_protocol_keyswitch);
+    let time_dec_dcr_to_qfe = start.elapsed();
+    println!("Time elapsed in protocol_keyswitch is: {:?}", time_dec_dcr_to_qfe);
 
     println!("start protocol_keygen_qfe_to_qfe");
     let start = SystemTime::now();
@@ -386,19 +368,11 @@ fn run_protocol_with_ml_data(
         &grp,
         &mut rng
     );
-    let time_protocol_keygen_i = start.elapsed();
-    println!("Time elapsed in protocol_keygen_i is: {:?}", time_protocol_keygen_i);
+    let time_protocol_keygen_qfe_to_qfe = start.elapsed();
+    println!("Time elapsed in protocol_keygen_qfe_to_qfe is: {:?}", time_protocol_keygen_qfe_to_qfe);
 
-    println!("start protocol_dec_i");
+    println!("start protocol_dec_qfe_to_qfe");
     let start = SystemTime::now();
-    // let (ct_out_x2, ct_out_y2, ct_out_h2) = protocol_dec_i(
-    //     (&ct_out_x, &ct_out_y, &ct_out_h),
-    //     (&qfe_b_x, &qfe_b_y, &qfe_b_h),
-    //     (&sk_f_mat_x, &sk_f_mat_y, &sk_f_mat_h),
-    //     (&sk_red_mat_x, &sk_red_mat_y, &sk_red_mat_h),
-    //     &decomp,
-    //     &grp
-    // );
     let ct0 = protocol_dec_qfe(
         &ct0,
         &fk_qfe_to_qfe,
@@ -408,12 +382,11 @@ fn run_protocol_with_ml_data(
         &grp,
         true,
     );
-    let time_protocol_dec_i = start.elapsed();
-    println!("Time elapsed in protocol_dec_i is: {:?}", time_protocol_dec_i);
+    let time_protocol_dec_qfe_to_qfe = start.elapsed();
+    println!("Time elapsed in protocol_dec_qfe_to_qfe is: {:?}", time_protocol_dec_qfe_to_qfe);
 
-    println!("start protocol_keygen_end");
+    println!("start protocol_keygen_qfe_to_plain");
     let start = SystemTime::now();
-    // let (sk_f_mat, sk_f_red) = protocol_keygen_end(&qfe_sk_vec[0], &h1_left, &f2, &decomp, &grp);
     let fk_qfe_to_plain = protocol_keygen_qfe_to_plain(
         &qfe_sk[1], // changed
         &h1_left,
@@ -421,17 +394,11 @@ fn run_protocol_with_ml_data(
         &grp
     );
     
-    let time_protocol_keygen_end = start.elapsed();
-    println!("Time elapsed in protocol_keygen_end is: {:?}", time_protocol_keygen_end);
+    let time_protocol_keygen_qfe_to_plain = start.elapsed();
+    println!("Time elapsed in protocol_keygen_qfe_to_plain is: {:?}", time_protocol_keygen_qfe_to_plain);
 
-    println!("start protocol_dec_end");
+    println!("start protocol_dec_qfe_to_plain");
     let start = SystemTime::now();
-    // let val_end = protocol_dec_end(
-    //     (&ct_out_x2, &ct_out_y2, &ct_out_h2),
-    //     (&sk_f_mat, &sk_f_red),
-    //     &decomp,
-    //     &grp
-    // );
     let val_end = protocol_dec_qfe(
         &ct0,
         &fk_qfe_to_plain,
@@ -441,8 +408,8 @@ fn run_protocol_with_ml_data(
         &grp,
         false,
     );
-    let time_protocol_dec_end = start.elapsed();
-    println!("Time elapsed in protocol_dec_end is: {:?}", time_protocol_dec_end);
+    let time_protocol_dec_qfe_to_plain = start.elapsed();
+    println!("Time elapsed in protocol_dec_qfe_to_plain is: {:?}", time_protocol_dec_qfe_to_plain);
     
     let val_scaled = val_end.iter().map(|x| x.clone() / scale_int_pow_10.clone()).collect::<Vec<Integer>>();
 
@@ -463,18 +430,18 @@ fn run_protocol_with_ml_data(
 
     println!(" === Time summaries ===");
     println!("protocol_setup: {:?}", time_setup);
-    println!("protocol_keygen_switch: {:?}", time_keygen_switch);
+    println!("protocol_keygen_dcr_to_qfe: {:?}", time_keygen_dcr_to_qfe);
     println!("protocol_enc_init: {:?}", time_enc);
-    println!("protocol_keyswitch: {:?}", time_protocol_keyswitch);
-    println!("protocol_keygen_i: {:?}", time_protocol_keygen_i);
-    println!("protocol_dec_i: {:?}", time_protocol_dec_i);
-    println!("protocol_keygen_end: {:?}", time_protocol_keygen_end);
-    println!("protocol_dec_end: {:?}", time_protocol_dec_end);
+    println!("protocol_keygen_qfe_to_qfe: {:?}", time_protocol_keygen_qfe_to_qfe);
+    println!("protocol_keygen_qfe_to_plain: {:?}", time_protocol_keygen_qfe_to_plain);
+    println!("protocol_dec_dcr_to_qfe: {:?}", time_dec_dcr_to_qfe);
+    println!("protocol_dec_qfe_to_qfe: {:?}", time_protocol_dec_qfe_to_qfe);
+    println!("protocol_dec_qfe_to_plain: {:?}", time_protocol_dec_qfe_to_plain);
     println!("");
     println!("SETUP: {:?}", time_setup.unwrap());
-    println!("KEYGEN: {:?}", time_keygen_switch.unwrap() + time_protocol_keygen_i.unwrap() + time_protocol_keygen_end.unwrap());
+    println!("KEYGEN: {:?}", time_keygen_dcr_to_qfe.unwrap() + time_protocol_keygen_qfe_to_qfe.unwrap() + time_protocol_keygen_qfe_to_plain.unwrap());
     println!("ENC: {:?}", time_enc.unwrap());
-    println!("DEC: {:?}", time_protocol_keyswitch.unwrap() + time_protocol_dec_i.unwrap() + time_protocol_dec_end.unwrap());
+    println!("DEC: {:?}", time_dec_dcr_to_qfe.unwrap() + time_protocol_dec_qfe_to_qfe.unwrap() + time_protocol_dec_qfe_to_plain.unwrap());
 }
 
 fn main() {

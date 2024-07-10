@@ -85,9 +85,6 @@ pub fn protocol_keygen_qfe_to_qfe(
 ) -> Matrix {
     // function: h_right * f * (hm_left tensor hm_left)
     let hmhm = Matrix::tensor_product(&hm_left, &hm_left, &grp.delta);
-    println!("h_right = {} x {}", h_right.rows, h_right.cols);
-    println!("f = {} x {}", f.rows, f.cols);
-    println!("hmhm = {} x {}", hmhm.rows, hmhm.cols);
     let mut total_mat: Matrix = h_right * &(f * &hmhm);
     total_mat.mod_inplace(&grp.n);
 
