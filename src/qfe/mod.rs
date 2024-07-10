@@ -8,7 +8,7 @@ mod tests {
     use rug::Integer;
     use rug::rand::RandState;
     use std::time::{Duration, SystemTime};
-    use crate::qfe::scheme::{qfe_setup, qfe_keygen, qfe_enc, qfe_enc_matrix_same_xy, qfe_dec, qfe_enc_matrix_expression, qfe_enc_test_for_protocol};
+    use crate::qfe::scheme::{qfe_setup, qfe_keygen, qfe_enc, qfe_dec};
     use crate::util::vector::{gen_random_vector, gen_random_vector_signed, vec_mod, vec_mul_scalar, int_mod};
 
     #[test]
@@ -20,7 +20,6 @@ mod tests {
         rand.seed(&Integer::from(d.as_secs()));
         
         let grp = Group::new(100); // Initialize the group        
-        // println!("{}", grp);
         
         let dim = 4;
         let q = 2 * dim + 1;
@@ -50,31 +49,7 @@ mod tests {
         let end = start.elapsed();
         println!("Time elapsed in qfe_keygen is: {:?}", end);
         
-        // let ctxt = qfe_enc(&qfe_sk, &x, &grp, &mut rand);
-        let ctxt = qfe_enc_test_for_protocol(&qfe_sk, &x, &grp, &mut rand);
-        // println!("ctxt comparison");
-        // println!("size: {} {}", ctxt.len(), ctxt2.len());
-        // for i in 0..ctxt.len() {
-        //     println!("{}", ctxt[i] == ctxt2[i]);
-        // }
-        // let mut ctxt_x: Vec<Integer>;
-        // let mut ctxt_y: Vec<Integer>;
-        // let mut ctxt_h: Vec<Integer>;
-        // // Perform encryption
-        // let start = SystemTime::now();
-        // let (enc_mat_x, enc_mat_y, enc_mat_h) = qfe_enc_matrix_same_xy(&qfe_sk, dim, &grp, &mut rand);
-        // let end = start.elapsed();
-        // println!("Time elapsed in qfe_enc_matrix is: {:?}", end);
-
-        // let mut x1 = x.clone();
-        // x1.push(Integer::from(1));
-
-        // ctxt_x = enc_mat_x.mul_vec(&x1);
-        // vec_mod(&mut ctxt_x, &grp.delta);
-        // ctxt_y = enc_mat_y.mul_vec(&x1);
-        // vec_mod(&mut ctxt_y, &grp.delta);
-        // ctxt_h = enc_mat_h.mul_vec(&x1);
-        // vec_mod(&mut ctxt_h, &grp.delta);
+        let ctxt = qfe_enc(&qfe_sk, &x, &grp, &mut rand);
         
         let start = SystemTime::now();
         let out = qfe_dec(&fk, &ctxt, dim, q, &grp);

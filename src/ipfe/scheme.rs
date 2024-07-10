@@ -1,4 +1,3 @@
-// ipfe.rs
 #![allow(dead_code)]
 
 extern crate rug;
@@ -91,41 +90,6 @@ pub fn ipfe_enc(
     vec_mod(&mut ctxt, &mod_val);
 
     ctxt
-}
-
-pub fn ipfe_enc_matrix_expression(sk: &IpfeSk, grp: &Group, mult_mu: bool, rand: &mut RandState<'_>) -> Matrix {
-    let mod_val = grp.delta.clone();
-    let r_pr = mod_val.clone().random_below(rand);
-    // r = 2 * N * r'
-    let r = &grp.n.clone() * Integer::from(2) * r_pr.clone();
-
-    // enc(x) = sk_enc * mu * x + (D_perp * rvec + sk1 * r)
-    // matrix = (sk_enc * mu || (D_perp * rvec + sk1 * r))
-
-    // Compute D_perp_rand = D_null_space_basis * rvec
-    let rand_tilde = gen_random_vector(sk.d_perp.cols, &mod_val, rand);
-    let d_perp_rand = sk.d_perp.clone() * rand_tilde;
-
-    // tmp = sk1 * r
-    let tmp = vec_mul_scalar(&sk.sk1, &r);
-
-    // x_b = D_perp_rand + sk1 * r
-    let mut enc_x_b = vec_add(&d_perp_rand, &tmp);
-    vec_mod(&mut enc_x_b, &mod_val);
-
-    let sk_enc_mu = if mult_mu {
-        let mut sk_enc_mu = sk.sk_enc.clone();
-        sk_enc_mu.mul_scalar_inplace(&grp.mu);
-        sk_enc_mu.mod_inplace(&mod_val);
-        sk_enc_mu
-    } else {
-        sk.sk_enc.clone()
-    };
-
-    let mut ipfe_enc_mat = concatenate_vec_col(&sk_enc_mu, &enc_x_b);
-    ipfe_enc_mat.mod_inplace(&mod_val);
-
-    ipfe_enc_mat 
 }
 
 pub fn ipfe_dec(sk_f: &Vec<Integer>, ctxt: &Vec<Integer>, grp: &Group, solve_dl: bool) -> Integer {

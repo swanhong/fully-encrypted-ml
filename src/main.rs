@@ -136,7 +136,6 @@ fn run_protocol_start_to_end(
         &f_origin[depth - 1],
         &grp
     );
-    println!("fk_qfe_to_plain size = {} x {}", fk_qfe_to_plain.rows, fk_qfe_to_plain.cols);
     let time_keygen_qfe_to_plain = start.elapsed();
     println!("Time elapsed in protocol_keygen_qfe_to_plain is: {:?}", time_keygen_qfe_to_plain);
 
@@ -207,7 +206,7 @@ fn run_protocol_start_to_end(
     println!("reprint inputs");
     println!("x: {:?}", x);
     for i in 0..f_num {
-        println!("f[{}] = {}", i, f[i]);
+        println!("f[{}] = \n{}", i, f[i]);
     }
     // print f^i(x)
     let mut fx = x.clone();

@@ -825,24 +825,6 @@ pub fn generate_right_inverse_space(
     (a, a_inv, null)
 }
 
-pub fn generate_right_inverse_space_trivial(
-    row: usize,
-    col: usize,
-    modulus: &Integer,
-    rng: &mut RandState<'_>,
-) -> (Matrix, Matrix, Matrix) {
-    // generate trivial d, d_inv, and d_perp
-    let mut d = Matrix::new(row, col);
-    let mut d_inv = Matrix::new(col, row);
-    for i in 0..row {
-        d.set(i, i, Integer::from(1));
-        d_inv.set(i, i, Integer::from(1));
-    }
-    let d_perp = Matrix::new(col, col - row);
-
-    (d, d_inv, d_perp)
-}
-
 pub fn eval_quadratic_multivariate(
     x: &Vec<Integer>,
     y: &Vec<Integer>,

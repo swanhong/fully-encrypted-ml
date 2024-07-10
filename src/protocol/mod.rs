@@ -7,15 +7,13 @@ pub mod test {
     use rug::rand::RandState;
     use std::time::SystemTime;
 
-    use crate::protocol::algorithm::{row_reduce_form, row_reduce_form_integer, sample_gamma_wo_padding, sample_h_trivial, sample_h_wo_padding};
+    use crate::protocol::algorithm::{row_reduce_form, row_reduce_form_integer, sample_h, sample_gamma};
     use crate::protocol::scheme::*;
-    use crate::qfe::scheme::*;
     use crate::util::group::Group;
 
     use crate::util::matrix::{concatenate_row, eval_quadratic_multivariate, Matrix};
-    use crate::util::vector::{gen_random_vector, vec_mod, tensor_product_vecs};
+    use crate::util::vector::{gen_random_vector, tensor_product_vecs};
     use crate::util::decomp::Decomp;
-    use super::algorithm::{sample_h, sample_gamma, sample_gamma_trivial};
 
     #[test]
     fn test_protocol_start_to_end() {
@@ -149,7 +147,6 @@ pub mod test {
             &f_mat_origin,
             &grp
         );
-        println!("fk_qfe_to_plain size = {} x {}", fk_qfe_to_plain.rows, fk_qfe_to_plain.cols);
         let end = start.elapsed();
         println!("Time elapsed in protocol_keygen_qfe_to_plain is: {:?}", end);
 

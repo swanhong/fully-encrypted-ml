@@ -7,8 +7,8 @@ mod tests {
 
     use rug::Integer;
     use rug::rand::RandState;
-    use crate::ipfe::scheme::{ipfe_setup, ipfe_keygen, ipfe_enc, ipfe_enc_matrix_expression, ipfe_dec};
-    use crate::util::vector::{gen_random_vector, vec_mod, int_mod};
+    use crate::ipfe::scheme::{ipfe_setup, ipfe_keygen, ipfe_enc, ipfe_dec};
+    use crate::util::vector::{gen_random_vector, int_mod};
     use std::time::SystemTime;
     
     #[test]
@@ -49,27 +49,8 @@ mod tests {
 
         // Perform encryption
         println!("start ipfe_enc");
-        let original = false;
-        let mut ctxt: Vec<Integer>;
         let start = SystemTime::now();
-        if original {
-            println!("run original enc");
-            ctxt = ipfe_enc(&sk, &x, &grp, true, &mut rand);
-        } else {
-            println!("run matrix enc");
-            let ipfe_enc_mat = ipfe_enc_matrix_expression(&sk, &grp, true, &mut rand);
-            let end = start.elapsed();
-            println!("Time elapsed in ipfe_enc_matrix_expression is: {:?}", end);
-
-            // println!("ipfe_enc_mat: {}", ipfe_enc_mat);
-
-            let mut x1 = x.clone();
-            x1.push(Integer::from(1));
-            // let start = SystemTime::now();
-            ctxt = ipfe_enc_mat * x1.clone();
-            vec_mod(&mut ctxt, &grp.delta);
-            // println!("ctxt: {:?}", ctxt);
-        }
+        let ctxt = ipfe_enc(&sk, &x, &grp, true, &mut rand);
         let end = start.elapsed();
         println!("Time elapsed in enc (mat_mult) is: {:?}", end);        
 

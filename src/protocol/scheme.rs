@@ -2,17 +2,13 @@ extern crate rug;
 use rug::Integer;
 use rug::rand::RandState;
 
-use crate::qfe;
 use crate::util::group::Group;
-use crate::util::matrix::{concatenate_row, concatenate_vec_row, remove_diag_one, Matrix};
-use crate::util::vector;
-use crate::util::vector::{gen_random_vector, vec_add, vec_mod, vec_mul_scalar, int_mod};
+use crate::util::matrix::Matrix;
+use crate::util::vector::vec_mod;
 use crate::util::decomp::Decomp;
 use crate::dcr::scheme::{dcr_setup, dcr_enc, dcr_keygen, dcr_dec};
 use crate::qfe::keys::QfeSk;
-use crate::qfe::scheme::{divide_vector_for_functional_key, get_ctxt_len, get_funcional_key_len, qfe_dec, qfe_enc, qfe_cenc, qfe_enc_for_x, qfe_enc_for_h, qfe_enc_matrix_same_xy, qfe_keygen, qfe_setup};
-use crate::ipfe::scheme::{ipfe_enc, ipfe_keygen};
-use std::time::SystemTime;
+use crate::qfe::scheme::{get_funcional_key_len, qfe_dec, qfe_cenc, qfe_keygen, qfe_setup};
 
 pub fn protocol_setup(
     dim_vec: &Vec<usize>,
@@ -114,8 +110,6 @@ pub fn protocol_keygen_qfe_to_plain(
     grp: &Group,
 ) -> Matrix {
     let hmhm = Matrix::tensor_product(&hm_left, &hm_left, &grp.delta);
-    println!("hmhm size = {} x {}", hmhm.rows, hmhm.cols);
-    println!("f size = {} x {}", f.rows, f.cols);
     let mut total_mat = f * &hmhm;
     total_mat.mod_inplace(&grp.n);
 
@@ -157,7 +151,6 @@ pub fn protocol_dec_qfe(
     grp: &Group,
     is_output_decomposed: bool,
 ) -> Vec<Integer> {
-    println!("fk_mat size in dec_qfe = {} x {}", fk_mat.rows, fk_mat.cols);
     let mut ct_out = vec![Integer::from(0); fk_mat.rows];
     println!("run qfe_dec of dim {} for {} times", fk_mat.cols, fk_mat.rows);
     for i in 0..fk_mat.rows {
