@@ -19,7 +19,7 @@ mod tests {
         .expect("Duration since UNIX_EPOCH failed");
         rand.seed(&Integer::from(d.as_secs()));
         
-        let grp = Group::new(100); // Initialize the group        
+        let grp = Group::new(100);
         
         let dim = 10;
         let q = 2 * dim + 1;
@@ -78,7 +78,5 @@ mod tests {
         println!("plain mod n: {}", out2_mod);
 
         assert_eq!(out_mod, out2_mod);
-
     }
-    
 }

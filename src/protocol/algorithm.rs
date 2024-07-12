@@ -2,7 +2,7 @@
 
 use rug::Integer;
 use rug::rand::RandState;
-use crate::util::matrix::{Matrix, concatenate_diag_one, matrix_inverse};
+use crate::util::matrix::{concatenate_diag_one, matrix_inverse, Matrix};
 use crate::util::vector::int_mod;
 
 pub fn row_reduce_form(m: &mut Matrix, mod_val: &Integer) -> (Matrix, i32) {
@@ -59,18 +59,11 @@ pub fn row_reduce_form(m: &mut Matrix, mod_val: &Integer) -> (Matrix, i32) {
                 for j in 0..n_cols {
                     let val2 = m.get(pivot_row, j);
                     let entry = int_mod(&(m.get(i, j) - (val2.clone() * ratio.clone())), mod_val);
-                    // println!("entry for {} {}", i, j);
-                    // println!("{} - {} * {} = {}", m.get(i, j), val2.clone(), ratio.clone(), entry);
                     m.set(i, j, entry);
                 }
 
                 // Update the row operations matrix
                 m_scalar.set(i, pivot_row, ratio.clone() * -1);
-                // for j in 0..n_rows {
-                //     let val3 = row_ops_matrix.get(pivot_row, j);
-                //     let entry = (val3 * ratio.clone() - row_ops_matrix.get(i, j)) % mod_val;
-                //     row_ops_matrix.set(i, j, entry);
-                // }
             }
         } 
         row_ops_matrix = m_scalar.clone() * row_ops_matrix;
@@ -164,7 +157,6 @@ pub fn sample_h(dim: usize, k: usize, modulo: &Integer, rng: &mut RandState<'_>)
         // sample h_0 from {-1, 0, 1}^{dim * (dim+k)}
         h_0 = Matrix::random(dim, dim + k, &Integer::from(3), rng);
         h_0.add_int_inplace(&Integer::from(-1));
-        // h_0.mod_inplace(modulo);
 
         h_t = h_0.transpose();
         let mut tmp = h_0.clone() * h_t.clone();
@@ -178,12 +170,9 @@ pub fn sample_h(dim: usize, k: usize, modulo: &Integer, rng: &mut RandState<'_>)
                 continue;
             }
         }
-
     }
-    
     h_pr_0 = h_t * h_0_inv;
     h_pr_0.mod_inplace(modulo);
-    
 
     let h = concatenate_diag_one(&h_0);
     let h_pr = concatenate_diag_one(&h_pr_0);

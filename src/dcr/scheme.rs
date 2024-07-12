@@ -6,8 +6,6 @@ use std::ops::MulAssign;
 use crate::util::group::Group;
 use crate::util::vector::{vec_exp_with_base, vec_pow, int_mod, vec_mod};
 
-// takes input of dimension, secret key bound, and group
-// returns a key pair (sk, pk)
 pub fn dcr_setup(
     dim: usize, 
     sk_bound: &Integer, 

@@ -74,8 +74,6 @@ pub mod test {
             h_left[i] = h_left_i;
             h_right[i] = h_right_i;
         }
-        // let (h0_left, h0_right) = sample_h(dim, k, &grp.delta, &mut rng);
-        // let (h1_left, h1_right) = sample_h(dim, k, &grp.delta, &mut rng);
         let (gamma_left, gamma_right) = sample_gamma(dim, &grp.n, &mut rng);
 
         let end = start.elapsed();
@@ -252,6 +250,10 @@ pub mod test {
             fx_one = eval_quadratic_multivariate(&fx_one, &fx_one, &f_mat);
             println!("f^{i}(x) = {:?}", fx_one);
             println!("val_end[{}]: {:?}", i, val_end[i]);
+            // assert fx_one == val_end
+            for j in 0..val_end[i].len() {
+                assert_eq!(fx_one[j], val_end[i][j]);
+            }
         }
         // let fx_one = eval_quadratic_multivariate(&x_one, &x_one, &f_mat);
         // println!("f(x) (1 padding) = {:?}", fx_one);
@@ -271,10 +273,10 @@ pub mod test {
         let n = Integer::from(101);
 
         let mut rng = RandState::new(); // Create a single RandState object
-        // let d = SystemTime::now()
-        // .duration_since(SystemTime::UNIX_EPOCH)
-        // .expect("Duration since UNIX_EPOCH failed");
-        // rng.seed(&Integer::from(d.as_secs()));
+        let d = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .expect("Duration since UNIX_EPOCH failed");
+        rng.seed(&Integer::from(d.as_secs()));
 
         let (h_left_1, h_right_1) = sample_h(dim, k, &n, &mut rng);
 
@@ -337,7 +339,6 @@ pub mod test {
         let mut counter = 0;
         let mut i = 0;
         while counter < dim {
-            println!("check {} {}", i, counter);
             let val = rref.get(i, counter);
             if val != Integer::from(0) {
                 let row = row_op.get_row(i);
@@ -388,7 +389,6 @@ pub mod test {
         let mut counter = 0;
         let mut i = 0;
         while counter < dim {
-            println!("check {} {}", i, counter);
             let val = rref.get(i, counter);
             if val != Integer::from(0) {
                 let row = row_op.get_row(i);

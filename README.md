@@ -26,15 +26,13 @@ This runs a 2-level composable FE evaluation. The default dimensions are [5, 4, 
 
 The target option `protocol` runs the protocol with a random message and evaluates the composition of two quadratic functions.
 ```bash
-    ./target/debug/fe --t protocol --bit-len 3072 --dim0 5 --dim1 4 --dim2 3 --bound 10
+    ./target/debug/fe --t protocol --bit-len 3072 --dim 5 --dim 4 --dim 3 --dim 2 --n-decomp 4
 ```
 The arguments are as follows:
 	- `--t`: Specifies the target option. In this case, it's protocol.
 	- `--bit-len`: The bit length of primes used for the DCR group. To ensure 128-bit security, this parameter should be chosen as 3072. Option: (10, 100, 3072)
-	- `--dim0`: The dimension of the initial random vector.
-	- `--dim1`: The dimension of the intermediate vector after the first quadratic polynomial evaluation.
-	- `--dim2`: The dimension of the final vector after the second quadratic polynomial evaluation.
-	- `--bound`: The bound for the elements in random message & coefficients of functions.
+	- `--dim`: The dimensions. first input set the input dimension, and the next inputs set the following dimentions
+	- `--n-decomp`: Decomposition parameter
 
 ### Run ML with UCI datasets
 
