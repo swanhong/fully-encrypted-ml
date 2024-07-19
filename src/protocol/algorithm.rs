@@ -3,9 +3,9 @@
 use rug::Integer;
 use rug::rand::RandState;
 use crate::util::matrix::{concatenate_diag_one, matrix_inverse, Matrix};
-use crate::util::vector::int_mod;
+use crate::util::vector::{int_mod, vec_mul_scalar};
 
-pub fn row_reduce_form(m: &mut Matrix, mod_val: &Integer) -> (Matrix, i32) {
+pub fn row_reduce_form(m: &mut Matrix, mod_val: &Integer) -> (Matrix, Vec<usize>, i32) {
     let n_rows = m.rows();
     let n_cols = m.cols();
 
@@ -15,16 +15,16 @@ pub fn row_reduce_form(m: &mut Matrix, mod_val: &Integer) -> (Matrix, i32) {
     let mut pivot_col = 0;
     let mut rank = 0;
 
+    let mut pivot_col_vec = Vec::new();
+
     while pivot_row < n_rows && pivot_col < n_cols {
-        println!("pivot_row, pivot_col = {}, {}", pivot_row, pivot_col);
-        println!("m = \n{}", m);
         let mut pivot = m.get(pivot_row, pivot_col);
 
         while pivot == 0 {
             pivot_row += 1;
 
             if pivot_row >= n_rows {
-                return (row_ops_matrix, -1);
+                return (row_ops_matrix, pivot_col_vec, -1);
             }
 
             pivot = m.get(pivot_row, pivot_col);
@@ -34,8 +34,6 @@ pub fn row_reduce_form(m: &mut Matrix, mod_val: &Integer) -> (Matrix, i32) {
             Ok(x) => x,
             Err(_e) => Integer::from(-1),
         };
-
-        // println!("pviot = {}, pivot_inv = {}", pivot, pivot_inv);
 
         if pivot_inv != Integer::from(-1) {
             // Scale the pivot row
@@ -69,16 +67,17 @@ pub fn row_reduce_form(m: &mut Matrix, mod_val: &Integer) -> (Matrix, i32) {
         row_ops_matrix = m_scalar.clone() * row_ops_matrix;
         row_ops_matrix.mod_inplace(mod_val);
 
+        pivot_col_vec.push(pivot_col);
         pivot_row += 1;
         pivot_col += 1;
         rank += 1;
     }
 
-    (row_ops_matrix.clone(), rank)
+    (row_ops_matrix.clone(), pivot_col_vec, rank)
 }
 
 #[allow(dead_code)]
-pub fn row_reduce_form_integer(m: &mut Matrix) -> (Matrix, i32) {
+pub fn row_reduce_form_integer(m: &mut Matrix) -> (Matrix, Vec<usize>, i32) {
     let n_rows = m.rows();
     let n_cols = m.cols();
 
@@ -87,6 +86,7 @@ pub fn row_reduce_form_integer(m: &mut Matrix) -> (Matrix, i32) {
     let mut pivot_row = 0;
     let mut pivot_col = 0;
     let mut rank = 0;
+    let mut pivot_vec = Vec::new();
     while pivot_row < n_rows && pivot_col < n_cols {
         let pivot = m.get(pivot_row, pivot_col);
 
@@ -112,7 +112,7 @@ pub fn row_reduce_form_integer(m: &mut Matrix) -> (Matrix, i32) {
                 }
                 i += 1;
             }
-            return (row_ops_matrix, -1);
+            return (row_ops_matrix, pivot_vec, -1);
         } else {
             for i in 0..n_rows {
                 if i != pivot_row {
@@ -131,17 +131,18 @@ pub fn row_reduce_form_integer(m: &mut Matrix) -> (Matrix, i32) {
             pivot_row += 1;
         }
 
+        pivot_vec.push(pivot_col);
         pivot_col += 1;
         rank += 1;
     }
 
-    (row_ops_matrix, rank)
+    (row_ops_matrix, pivot_vec, rank)
 }
 
-pub fn sample_h(dim: usize, k: usize, modulo: &Integer, rng: &mut RandState<'_>) -> (Matrix, Matrix) {
+pub fn sample_h(dim: usize, k: usize, bound: &Integer, modulo: &Integer, rng: &mut RandState<'_>) -> (Matrix, Matrix) {
     // sample two matrices h_left_1 and h_right_1
     
-    // h_left is dim * (dim + k ) ternary matrix
+    // h_left is dim * (dim + k ) matrix in [-bound, bound]
     // h_right is (dim + k) * dim matrix satisfying h_left * h_right = identity_dim
 
     // h_right = h^t * (h * h^t)^-1 
@@ -153,17 +154,29 @@ pub fn sample_h(dim: usize, k: usize, modulo: &Integer, rng: &mut RandState<'_>)
     let h_0_inv: Matrix; // dim * dim
     let mut h_pr_0: Matrix; // (dim + k) * dim
 
+    let mut rref;
+    let mut pivot_vec;
     loop {
         // sample h_0 from {-1, 0, 1}^{dim * (dim+k)}
-        h_0 = Matrix::random(dim, dim + k, &Integer::from(3), rng);
-        h_0.add_int_inplace(&Integer::from(-1));
-
+        h_0 = Matrix::random(dim, dim + k, &(bound * Integer::from(2)), rng);
+        h_0.add_int_inplace(&(bound * Integer::from(-1)));
         h_t = h_0.transpose();
+
+        rref = h_t.clone();
+        let rank;
+        (_, pivot_vec, rank) = row_reduce_form(&mut rref, modulo);
+        rref = rref.transpose();
+        if (rank as usize) != dim{
+            continue;
+        }
+        
         let mut tmp = h_0.clone() * h_t.clone();
         tmp.mod_inplace(modulo);
         match matrix_inverse(&mut tmp, modulo) {
             Ok(m_inv) => {
                 h_0_inv = m_inv.clone();
+                let mut mul = tmp.clone() * h_0_inv.clone();
+                mul.mod_inplace(modulo);
                 break;
             }
             Err(_rank) => {
@@ -172,6 +185,29 @@ pub fn sample_h(dim: usize, k: usize, modulo: &Integer, rng: &mut RandState<'_>)
         }
     }
     h_pr_0 = h_t * h_0_inv;
+    h_pr_0.mod_inplace(modulo);
+
+    let mut nul_space_basis = Matrix::new(dim + k, rref.cols - pivot_vec.len());
+    
+    // for nums in 0..(dim+k) that not in pivot_vec
+    let mut j = 0;
+
+    for i in 0..rref.cols {
+        if !pivot_vec.contains(&i) {
+            let mut vec = rref.get_col(i);
+            vec = vec_mul_scalar(&vec, &Integer::from(-1));
+            let mut nul_basis = vec![Integer::from(0); rref.cols];
+            for k in 0..vec.len() {
+                nul_basis[k] = vec[k].clone();
+            }
+            nul_basis[dim + j] = Integer::from(1);
+            nul_space_basis.set_col(j, &nul_basis);
+            j += 1;
+        }
+    }
+    let rand = Matrix::random(nul_space_basis.cols, h_pr_0.cols, modulo, rng);
+    let null: Matrix = nul_space_basis.clone() * rand;
+    h_pr_0 = h_pr_0 + null;
     h_pr_0.mod_inplace(modulo);
 
     let h = concatenate_diag_one(&h_0);

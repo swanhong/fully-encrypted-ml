@@ -36,6 +36,7 @@ fn run_protocol_start_to_end(
     let grp = Group::new(bit_len); // Initialize the group    
     let depth = dim.len() - 1;  
     let k = 1;
+    let bound_h = Integer::from(1026); // bound_h * 2 + 1 is 11-bit prime
     let sk_bound= get_sk_bound(dim[0], bound, 128, &grp);
     let bound = Integer::from(bound);  
     
@@ -77,7 +78,7 @@ fn run_protocol_start_to_end(
     let mut h_left = vec![Matrix::new(0, 0); depth];
     let mut h_right = vec![Matrix::new(0, 0); depth];
     for i in 0..depth {
-        let (h_left_i, h_right_i) = sample_h(dim[i], k, &grp.n, rng);
+        let (h_left_i, h_right_i) = sample_h(dim[i], k, &bound_h, &grp.n, rng);
         h_left[i] = h_left_i;
         h_right[i] = h_right_i;
     }
@@ -268,7 +269,7 @@ fn run_protocol_with_ml_data(
     let scale_int = Integer::from(scale);
     let scale_int_pow_1 = scale_int.clone().pow(1);
     let scale_int_pow_4 = scale_int.clone().pow(4);
-    let scale_int_pow_10 = scale_int.clone().pow(10);
+    // let scale_int_pow_10 = scale_int.clone().pow(10);
     layer1_bias.mul_scalar_inplace(&scale_int_pow_1); // scale * scale^1
     layer2_bias.mul_scalar_inplace(&scale_int_pow_4); // scale * scale^4
 
@@ -298,6 +299,7 @@ fn run_protocol_with_ml_data(
     let dim2 = f1.rows - 1;
     let dim3 = f2.rows;
     let k = 1; // fixed
+    let bound_h = Integer::from(1026);
     let sk_bound = get_sk_bound(dim, 10 * scale as usize, 128, &grp);
 
     // Perform setup
@@ -315,8 +317,8 @@ fn run_protocol_with_ml_data(
 
     println!("dim, dim2, dim3 = {}, {}, {}", dim, dim2, dim3);
     
-    let (h0_left, h0_right) = sample_h(dim, k, &grp.delta, &mut rng);
-    let (h1_left, h1_right) = sample_h(dim2, k, &grp.delta, &mut rng);
+    let (h0_left, h0_right) = sample_h(dim, k, &bound_h, &grp.delta, &mut rng);
+    let (h1_left, h1_right) = sample_h(dim2, k, &bound_h, &grp.delta, &mut rng);
 
     let (gamma_left, gamma_right) = sample_gamma(dim, &grp.delta, &mut rng);
     let time_setup = start.elapsed();
@@ -409,8 +411,6 @@ fn run_protocol_with_ml_data(
     );
     let time_protocol_dec_qfe_to_plain = start.elapsed();
     println!("Time elapsed in protocol_dec_qfe_to_plain is: {:?}", time_protocol_dec_qfe_to_plain);
-    
-    let val_scaled = val_end.iter().map(|x| x.clone() / scale_int_pow_10.clone()).collect::<Vec<Integer>>();
 
     println!("reprint inputs");
     let mut x1 = x.clone();
@@ -425,7 +425,6 @@ fn run_protocol_with_ml_data(
     vec_mod(&mut ffx, &grp.n);
     println!("real mod n = {:?}", ffx);
     println!("eval result: {:?}", val_end);
-    println!("scaled result: {:?}", val_scaled);
 
     println!(" === Time summaries ===");
     println!("protocol_setup: {:?}", time_setup);

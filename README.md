@@ -24,7 +24,7 @@ This runs a 2-level composable FE evaluation. The default dimensions are [5, 4, 
 
 ### Run Protocol
 
-The target option `protocol` runs the protocol with a random message and evaluates the composition of two quadratic functions.
+The target option `protocol` runs the protocol with a random message and evaluates the composition of multiple quadratic functions.
 ```bash
     ./target/debug/fe --t protocol --bit-len 3072 --dim 5 --dim 4 --dim 3 --dim 2 --n-decomp 4
 ```

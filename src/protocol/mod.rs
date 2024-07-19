@@ -31,6 +31,7 @@ pub mod test {
         
         let dim = 3;
         let k = 1;
+        let bound_h = Integer::from(20);
         let depth = dim;
         let bound = 5;
         let sk_bound = Integer::from(10);
@@ -70,7 +71,7 @@ pub mod test {
         let mut h_left = vec![Matrix::new(0, 0); depth];
         let mut h_right = vec![Matrix::new(0, 0); depth];
         for i in 0..depth {
-            let (h_left_i, h_right_i) = sample_h(dim, k, &grp.delta, &mut rng);
+            let (h_left_i, h_right_i) = sample_h(dim, k, &bound_h, &grp.delta, &mut rng);
             h_left[i] = h_left_i;
             h_right[i] = h_right_i;
         }
@@ -270,7 +271,8 @@ pub mod test {
     fn test_matrix_h_and_gamma() {
         let dim = 5;
         let k = 2;
-        let n = Integer::from(101);
+        let bound_h = Integer::from(3);
+        let n = Integer::from(3331);
 
         let mut rng = RandState::new(); // Create a single RandState object
         let d = SystemTime::now()
@@ -278,7 +280,7 @@ pub mod test {
         .expect("Duration since UNIX_EPOCH failed");
         rng.seed(&Integer::from(d.as_secs()));
 
-        let (h_left_1, h_right_1) = sample_h(dim, k, &n, &mut rng);
+        let (h_left_1, h_right_1) = sample_h(dim, k, &bound_h, &n, &mut rng);
 
         println!("h_left_1:");
         println!("{}", h_left_1);
@@ -320,19 +322,22 @@ pub mod test {
         let mut rref = Matrix::new(1, 1);
         let mut m = Matrix::new(1, 1);
         let mut row_op = Matrix::new(1, 1);
+        let mut pivot_vec = Vec::new();
         while rank < (dim as i32) {
             m = Matrix::random(dim + 1, dim, &Integer::from(3), &mut rng);
             m.add_int_inplace(&Integer::from(-1));
             m.mod_inplace(&Integer::from(11));
 
             rref = m.clone();
-            let (new_row_op, new_rank) = row_reduce_form(&mut rref, &Integer::from(11));
+            let (new_row_op, new_pivot_vec, new_rank) = row_reduce_form(&mut rref, &Integer::from(11));
             rank = new_rank;
             row_op = new_row_op;
+            pivot_vec = new_pivot_vec;
         }
         println!("m = {}", m);
         
         println!("rref = {}", rref);
+        println!("pivot_vec = {:?}", pivot_vec);
         println!("row_op = {}", row_op);
 
         let mut m_left_inv = Matrix::new(dim, dim + 1);
@@ -359,7 +364,7 @@ pub mod test {
 
     #[test]
     fn test_row_reduce_echelon_form_integer() {
-        let dim = 2;
+        let dim = 4;
         let mut rng = RandState::new(); // Create a single RandState object
         let d = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
@@ -370,17 +375,21 @@ pub mod test {
         let mut rref = Matrix::new(1, 1);
         let mut m = Matrix::new(1, 1);
         let mut row_op = Matrix::new(1, 1);
+        let mut pivot_vec = Vec::new();
         while rank < (dim as i32) {
             m = Matrix::random(dim + 1, dim, &Integer::from(3), &mut rng);
             m.add_int_inplace(&Integer::from(-1));
             rref = m.clone();
-            let (new_row_op, new_rank) = row_reduce_form_integer(&mut rref);
+            let (new_row_op, new_pivot_vec, new_rank) = row_reduce_form_integer(&mut rref);
             rank = new_rank;
             row_op = new_row_op;
+            pivot_vec = new_pivot_vec;
         }
         println!("m = \n{}", m);
         println!("rref = \n{}", rref);
         println!("row_op = \n{}", row_op);
+        println!("rank = {}", rank);
+        println!("pivot_vec = {:?}", pivot_vec);
 
         let mult = row_op.clone() * m.clone();
         println!("mult = \n{}", mult);
