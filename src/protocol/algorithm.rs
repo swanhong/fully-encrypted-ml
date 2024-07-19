@@ -67,7 +67,7 @@ pub fn row_reduce_form(m: &mut Matrix, mod_val: &Integer) -> (Matrix, Vec<usize>
         row_ops_matrix = m_scalar.clone() * row_ops_matrix;
         row_ops_matrix.mod_inplace(mod_val);
 
-        pivot_col_vec.push(pivot_col);
+        pivot_col_vec.push(pivot_row);
         pivot_row += 1;
         pivot_col += 1;
         rank += 1;
@@ -155,6 +155,7 @@ pub fn sample_h(dim: usize, k: usize, bound: &Integer, modulo: &Integer, rng: &m
     let mut h_pr_0: Matrix; // (dim + k) * dim
 
     let mut rref;
+    let mut row_op;
     let mut pivot_vec;
     loop {
         // sample h_0 from {-1, 0, 1}^{dim * (dim+k)}
@@ -164,7 +165,7 @@ pub fn sample_h(dim: usize, k: usize, bound: &Integer, modulo: &Integer, rng: &m
 
         rref = h_t.clone();
         let rank;
-        (_, pivot_vec, rank) = row_reduce_form(&mut rref, modulo);
+        (row_op, pivot_vec, rank) = row_reduce_form(&mut rref, modulo);
         rref = rref.transpose();
         if (rank as usize) != dim{
             continue;
@@ -191,22 +192,25 @@ pub fn sample_h(dim: usize, k: usize, bound: &Integer, modulo: &Integer, rng: &m
     
     // for nums in 0..(dim+k) that not in pivot_vec
     let mut j = 0;
-
     for i in 0..rref.cols {
         if !pivot_vec.contains(&i) {
             let mut vec = rref.get_col(i);
             vec = vec_mul_scalar(&vec, &Integer::from(-1));
             let mut nul_basis = vec![Integer::from(0); rref.cols];
-            for k in 0..vec.len() {
-                nul_basis[k] = vec[k].clone();
+            for k in 0..pivot_vec.len() {
+                nul_basis[pivot_vec[k]] = vec[k].clone();
             }
-            nul_basis[dim + j] = Integer::from(1);
+            nul_basis[i] = Integer::from(1);
             nul_space_basis.set_col(j, &nul_basis);
             j += 1;
         }
     }
     let rand = Matrix::random(nul_space_basis.cols, h_pr_0.cols, modulo, rng);
-    let null: Matrix = nul_space_basis.clone() * rand;
+
+    let row_nul: Matrix = row_op.transpose() * nul_space_basis.clone();
+    let mut mul = h_0.clone() * row_nul.clone();
+    mul.mod_inplace(modulo);
+    let null: Matrix = row_nul.clone() * rand;
     h_pr_0 = h_pr_0 + null;
     h_pr_0.mod_inplace(modulo);
 
