@@ -55,11 +55,12 @@ fn run_protocol_start_to_end(
             &grp.delta, 
             rng
         );
-        
-        if i < f_num {
+        if i < f_num - 1 {
             let mut unit_vector = Matrix::new(1, f_origin[i].cols);
             unit_vector.set(0, f_origin[i].cols - 1, Integer::from(1));
             f[i] = concatenate_row(&f_origin[i], &unit_vector);
+        } else {
+            f[i] = f_origin[i].clone();
         }
     }
 
@@ -78,9 +79,7 @@ fn run_protocol_start_to_end(
     let mut h_left = vec![Matrix::new(0, 0); depth];
     let mut h_right = vec![Matrix::new(0, 0); depth];
     for i in 0..depth {
-        let (h_left_i, h_right_i) = sample_h(dim[i], k, &bound_h, &grp.n, rng);
-        h_left[i] = h_left_i;
-        h_right[i] = h_right_i;
+        (h_left[i], h_right[i]) = sample_h(dim[i], k, &bound_h, &grp.n, rng);
     }
     let (gamma_left, gamma_right) = sample_gamma(dim[0], &grp.n, rng);
     let time_setup = start.elapsed();
@@ -283,44 +282,34 @@ fn run_protocol_with_ml_data(
     let f1 = concatenate_vec_row(&f1_no_one, &vec_one);
 
     let f2_notensor = concatenate_col(&layer2_weight, &layer2_bias);
-    println!("f2_notensor size = {} x {}", f2_notensor.rows, f2_notensor.cols);
     let f2 = f2_notensor.gen_tensored_matrix(&grp.delta);
-    println!("f2 size = {} x {}", f2.rows, f2.cols);
 
-
-    println!("scale = {}", scale);
-    println!("x = {:?}", x);
-    println!("f1_notensor = {}", f1_notensor);
-    println!("f2_notensor = {}", f2_notensor);
-
-    assert_eq!((x.len() + 1) * (x.len() + 1), f1.cols, "dim1 is not matched between x and f1"); // dim
-    assert_eq!(f1.rows * f1.rows, f2.cols, "dim2 is not matched between f1 and f2"); // dim2
-    let dim = x.len();
-    let dim2 = f1.rows - 1;
-    let dim3 = f2.rows;
     let k = 1; // fixed
     let bound_h = Integer::from(1026);
-    let sk_bound = get_sk_bound(dim, 10 * scale as usize, 128, &grp);
-
+    let dim = vec![x.len(), f1.rows - 1, f2.rows];
+    let depth = 2;
+    let sk_bound = get_sk_bound(dim[0], 10 * scale as usize, 128, &grp);
+    
     // Perform setup
     println!("start protocol_setup");
     let start = SystemTime::now();
     let ((dcr_sk, dcr_pk),
         qfe_sk,
     ) = protocol_setup(
-        &vec![dim, dim2, dim3],
+        &dim,
         k,
         &sk_bound,
         &grp,
         &mut rng);
     println!("protocol setup done?");
 
-    println!("dim, dim2, dim3 = {}, {}, {}", dim, dim2, dim3);
-    
-    let (h0_left, h0_right) = sample_h(dim, k, &bound_h, &grp.delta, &mut rng);
-    let (h1_left, h1_right) = sample_h(dim2, k, &bound_h, &grp.delta, &mut rng);
+    let mut h_left = vec![Matrix::new(0, 0); depth];
+    let mut h_right = vec![Matrix::new(0, 0); depth];
+    for i in 0..depth {
+        (h_left[i], h_right[i]) = sample_h(dim[i], k, &bound_h, &grp.n, &mut rng);
+    }
 
-    let (gamma_left, gamma_right) = sample_gamma(dim, &grp.delta, &mut rng);
+    let (gamma_left, gamma_right) = sample_gamma(dim[0], &grp.delta, &mut rng);
     let time_setup = start.elapsed();
     println!("Time elapsed in protocol_setup is: {:?}", time_setup);
 
@@ -329,7 +318,7 @@ fn run_protocol_with_ml_data(
         = protocol_keygen_dcr_to_qfe(
             &dcr_sk, 
             &qfe_sk[0],
-            &h0_right, 
+            &h_right[0], 
             &gamma_left, 
             &decomp, 
             &grp, 
@@ -362,8 +351,8 @@ fn run_protocol_with_ml_data(
     let fk_qfe_to_qfe = protocol_keygen_qfe_to_qfe(
         &qfe_sk[0],
         &qfe_sk[1],
-        &h1_right,
-        &h0_left,
+        &h_right[1],
+        &h_left[0],
         &f1,
         &decomp,
         &grp,
@@ -377,8 +366,8 @@ fn run_protocol_with_ml_data(
     let ct0 = protocol_dec_qfe(
         &ct0,
         &fk_qfe_to_qfe,
-        dim + k + 1,
-        2 * (dim + k + 1) + 1,
+        dim[0] + k + 1,
+        2 * (dim[0] + k + 1) + 1,
         &decomp,
         &grp,
         true,
@@ -390,7 +379,7 @@ fn run_protocol_with_ml_data(
     let start = SystemTime::now();
     let fk_qfe_to_plain = protocol_keygen_qfe_to_plain(
         &qfe_sk[1], // changed
-        &h1_left,
+        &h_left[1],
         &f2,
         &grp
     );
@@ -403,8 +392,8 @@ fn run_protocol_with_ml_data(
     let val_end = protocol_dec_qfe(
         &ct0,
         &fk_qfe_to_plain,
-        dim2 + k + 1,
-        2 * (dim2 + k + 1) + 1,
+        dim[1] + k + 1,
+        2 * (dim[1] + k + 1) + 1,
         &decomp,
         &grp,
         false,
