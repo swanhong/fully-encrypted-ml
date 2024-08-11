@@ -62,6 +62,19 @@ impl Matrix {
         matrix
     }
 
+    pub fn random_signed(rows: usize, cols: usize, bound: &Integer, rng: &mut RandState<'_>) -> Matrix {
+        let mut matrix = Matrix::new(rows, cols);
+        let bound2 = bound.clone() * Integer::from(2);
+
+        for i in 0..rows {
+            for j in 0..cols {
+                matrix.set(i, j, bound2.clone().random_below(rng) - bound.clone());
+            }
+        }
+
+        matrix
+    }
+
     pub fn gen_tensored_matrix(&self, modulo: &Integer) -> Matrix {
         // input dim = self.rows
         // output dim = self.cols

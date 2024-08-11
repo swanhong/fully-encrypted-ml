@@ -2,7 +2,8 @@
 
 use rug::Integer;
 use rug::rand::RandState;
-use crate::util::matrix::{concatenate_diag_one, matrix_inverse, Matrix};
+use rand::seq::SliceRandom;
+use crate::util::matrix::{concatenate_col, concatenate_diag_one, concatenate_row, matrix_inverse, Matrix};
 use crate::util::vector::{int_mod, vec_mul_scalar};
 
 pub fn row_reduce_form(m: &mut Matrix, mod_val: &Integer) -> (Matrix, Vec<usize>, i32) {
@@ -140,44 +141,92 @@ pub fn row_reduce_form_integer(m: &mut Matrix) -> (Matrix, Vec<usize>, i32) {
 }
 
 pub fn sample_h(dim: usize, k: usize, bound: &Integer, modulo: &Integer, rng: &mut RandState<'_>) -> (Matrix, Matrix) {
-    // sample two matrices h_left_1 and h_right_1
-    
-    // h_left is dim * (dim + k ) matrix in [-bound, bound]
-    // h_right is (dim + k) * dim matrix satisfying h_left * h_right = identity_dim
+    // mat_u: k x (dim + k) matrix: id_k || 0_{dim x k}
+    // let mut mat_u = Matrix::get_identity(k);
+    // let mat_v = Matrix::new(k, dim);
+    // mat_u = concatenate_col(&mat_u, &mat_v);
 
-    // h_right = h^t * (h * h^t)^-1 
-    // h_left_1 = (h_left, 1)
-    // h_right_1 = (h_right, 1)
-
-    let mut h_0: Matrix; // dim * (dim + k)
-    let mut h_t: Matrix; // (dim + k) * dim
-    let h_0_inv: Matrix; // dim * dim
-    let mut h_pr_0: Matrix; // (dim + k) * dim
-
-    let mut rref;
-    let mut row_op;
-    let mut pivot_vec;
+    // println!("mat_u : {}", mat_u);
+    let mut mat_u: Matrix;
+    let mut row_ops: Matrix;
+    let mut pivot_vec: Vec<usize>;
     loop {
-        // sample h_0 from {-1, 0, 1}^{dim * (dim+k)}
-        h_0 = Matrix::random(dim, dim + k, &(bound * Integer::from(2)), rng);
-        h_0.add_int_inplace(&(bound * Integer::from(-1)));
-        h_t = h_0.transpose();
+        // create random permutation vector of size (dim + k)
+        let mut perm = (0..dim+k).collect::<Vec<usize>>();
+        perm.shuffle(&mut rand::thread_rng());
+        // println!("perm : {:?}", perm);
 
-        rref = h_t.clone();
-        let rank;
-        (row_op, pivot_vec, rank) = row_reduce_form(&mut rref, modulo);
-        rref = rref.transpose();
-        if (rank as usize) != dim{
-            continue;
+        // create permutation matrix mat_u
+        // entry is +-1 in random
+        mat_u = Matrix::new(k, dim + k);
+        for j in 0..k {
+            let val = 2 * Integer::from(2).random_below(rng) - 1;
+            mat_u.set(j, perm[j], val);
         }
         
-        let mut tmp = h_0.clone() * h_t.clone();
-        tmp.mod_inplace(modulo);
-        match matrix_inverse(&mut tmp, modulo) {
-            Ok(m_inv) => {
-                h_0_inv = m_inv.clone();
-                let mut mul = tmp.clone() * h_0_inv.clone();
-                mul.mod_inplace(modulo);
+        // mat_u = Matrix::random(k, dim + k, bound, rng);
+        println!("mat_u : {}", mat_u);
+        (row_ops, pivot_vec, _) = row_reduce_form(&mut mat_u.transpose(), modulo);
+        println!("pivot_vec.len() = {}", pivot_vec.len());
+        if pivot_vec.len() == k {
+            break;
+        }
+    }
+    println!("row_ops : {}", row_ops);
+    println!("pivot_vec : {:?}", pivot_vec);
+    println!("mat_u = \n{}", mat_u);
+    // Compute the left null space of mat_u
+    let mut null_space = Matrix::new(mat_u.cols(), mat_u.cols() - mat_u.rows());
+
+    let mut free_var_index = 0;
+    for col in 0..mat_u.cols() {
+        if !pivot_vec.contains(&col) {
+            // Set the free variable column to the corresponding basis vector
+            null_space.set(col, free_var_index, Integer::from(1));
+
+            // Update the null space entries using the row operations
+            for idx in 0..pivot_vec.len() {
+                let pivot = pivot_vec[idx];
+                if pivot >= col {
+                    break;
+                }
+                println!("pivot = {}, col = {}", pivot, col);
+                let val = mat_u.get(idx, col);
+                let val_neg = val.clone() * Integer::from(-1);
+                null_space.set(pivot, free_var_index, val_neg);
+            }
+
+            free_var_index += 1;
+        }
+        // println!("col = {}, free_var_index = {}", col, free_var_index);
+        // println!("null_space : {}", null_space);
+    }
+
+    println!("null_space : \n{}", null_space);
+
+    println!("test null space");
+    println!("mat_u * null_space = {}", mat_u.clone() * null_space.clone());
+
+    let mat_u = mat_u.transpose();
+    let mat_v = null_space.transpose();
+
+    println!("test v * u");
+    let mut mul = mat_v.clone() * mat_u.clone();
+    mul.mod_inplace(modulo);
+    println!("v * u = {}", mul);
+
+    // fix lambda = 128
+    // B_h >= 2^{lambda/(dim * k) - 1}
+    let bound_h = Integer::from(2).pow(128 / (dim * k) as u32 - 1);
+    println!("bound_h = {}", bound_h);
+    let mat_t: Matrix;
+    let mut mat_h: Matrix;
+    loop {
+        mat_h = Matrix::random_signed(dim+k, dim, &bound_h, rng);
+        let mul = mat_v.clone() * mat_h.clone();
+        match matrix_inverse(&mut mul.clone(), modulo) {
+            Ok(inv) => {
+                mat_t = inv.clone();
                 break;
             }
             Err(_rank) => {
@@ -185,39 +234,13 @@ pub fn sample_h(dim: usize, k: usize, bound: &Integer, modulo: &Integer, rng: &m
             }
         }
     }
-    h_pr_0 = h_t * h_0_inv;
-    h_pr_0.mod_inplace(modulo);
 
-    let mut nul_space_basis = Matrix::new(dim + k, rref.cols - pivot_vec.len());
-    
-    // for nums in 0..(dim+k) that not in pivot_vec
-    let mut j = 0;
-    for i in 0..rref.cols {
-        if !pivot_vec.contains(&i) {
-            let mut vec = rref.get_col(i);
-            vec = vec_mul_scalar(&vec, &Integer::from(-1));
-            let mut nul_basis = vec![Integer::from(0); rref.cols];
-            for k in 0..pivot_vec.len() {
-                nul_basis[pivot_vec[k]] = vec[k].clone();
-            }
-            nul_basis[i] = Integer::from(1);
-            nul_space_basis.set_col(j, &nul_basis);
-            j += 1;
-        }
-    }
-    let rand = Matrix::random(nul_space_basis.cols, h_pr_0.cols, modulo, rng);
+    let mat_h_pr = mat_t * mat_v.clone();
 
-    let row_nul: Matrix = row_op.transpose() * nul_space_basis.clone();
-    let mut mul = h_0.clone() * row_nul.clone();
-    mul.mod_inplace(modulo);
-    let null: Matrix = row_nul.clone() * rand;
-    h_pr_0 = h_pr_0 + null;
-    h_pr_0.mod_inplace(modulo);
+    let mat_h = concatenate_diag_one(&mat_h);
+    let mat_h_pr = concatenate_diag_one(&mat_h_pr);
 
-    let h = concatenate_diag_one(&h_0);
-    let h_pr = concatenate_diag_one(&h_pr_0);
-
-    (h_pr.transpose(), h.transpose())
+    (mat_h_pr, mat_h)
 }
 
 pub fn sample_gamma(

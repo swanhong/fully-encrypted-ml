@@ -271,7 +271,7 @@ pub mod test {
     fn test_matrix_h_and_gamma() {
         let dim = 5;
         let k = 2;
-        let bound_h = Integer::from(3);
+        let bound_h = Integer::from(10);
         let n = Integer::from(3331);
 
         let mut rng = RandState::new(); // Create a single RandState object
@@ -352,13 +352,12 @@ pub mod test {
             }
             i += 1;
         } 
-
         println!("m_left_inv = {}", m_left_inv);
 
         // test mult
         let mut m2 = m_left_inv * m.clone();
         m2.mod_inplace(&Integer::from(11));
-        println!("m2 = \n{}", m2);
+        println!("left_inv * m = \n{}", m2);
 
     }
 

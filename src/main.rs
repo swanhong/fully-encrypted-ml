@@ -35,7 +35,7 @@ fn run_protocol_start_to_end(
 
     let grp = Group::new(bit_len); // Initialize the group    
     let depth = dim.len() - 1;  
-    let k = 1;
+    let k = 3;
     let bound_h = Integer::from(1026); // bound_h * 2 + 1 is 11-bit prime
     let sk_bound= get_sk_bound(dim[0], bound, 128, &grp);
     let bound = Integer::from(bound);  
