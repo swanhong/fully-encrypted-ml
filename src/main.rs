@@ -431,6 +431,35 @@ fn run_protocol_with_ml_data(
     println!("DEC: {:?}", time_dec_dcr_to_qfe.unwrap() + time_protocol_dec_qfe_to_qfe.unwrap() + time_protocol_dec_qfe_to_plain.unwrap());
 }
 
+fn benchmark_basic_operation(
+    bit_len: u64
+) {
+    let grp = Group::new(bit_len); // Initialize the group
+    let mut rng = RandState::new(); // Create a single RandState object
+    let d = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .expect("Duration since UNIX_EPOCH failed");
+    rng.seed(&Integer::from(d.as_secs()));
+
+    // test exponentiaion operation
+    let num_test = 100;
+    let dim = 1;
+
+    let start = SystemTime::now();
+    use crate::util::vector::vec_pow_by_vec;
+    for _ in 0..num_test {
+        let base = gen_random_vector(dim, &grp.n_sq, &mut rng);
+        let pow = gen_random_vector(dim, &grp.delta, &mut rng);
+
+        let _ = vec_pow_by_vec(&base, &pow, &grp.n_sq);
+    }
+    let end = start.elapsed();
+    let end_float = end.clone().unwrap().as_secs_f64();
+    println!("Time elapsed in vec_pow_by_vec is: {:?}", end);
+    let average_time = end_float / num_test as f64 / dim as f64;
+    println!("Average time elapsed in vec_pow_by_vec is: {:?}", average_time);
+}
+
 fn main() {
     let args = Argument::parse();
     println!("{}", args);
@@ -475,6 +504,9 @@ fn main() {
                 scale,
                 n_decomp,
             );
+        },
+        "bench" => {
+            benchmark_basic_operation(bit_len);
         },
         _ => {
             println!("invalid target");
