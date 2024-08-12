@@ -64,11 +64,11 @@ impl Matrix {
 
     pub fn random_signed(rows: usize, cols: usize, bound: &Integer, rng: &mut RandState<'_>) -> Matrix {
         let mut matrix = Matrix::new(rows, cols);
-        let bound2 = bound.clone() * Integer::from(2);
-
+        let bound2: Integer = bound.clone() * 2 + 1;
         for i in 0..rows {
             for j in 0..cols {
-                matrix.set(i, j, bound2.clone().random_below(rng) - bound.clone());
+                let val = bound2.clone().random_below(rng) - bound.clone();
+                matrix.set(i, j, val);
             }
         }
 

@@ -2,9 +2,8 @@
 
 use rug::Integer;
 use rug::rand::RandState;
-use rand::seq::SliceRandom;
-use crate::util::matrix::{concatenate_col, concatenate_diag_one, concatenate_row, matrix_inverse, Matrix};
-use crate::util::vector::{int_mod, vec_mul_scalar};
+use crate::util::matrix::{concatenate_diag_one, matrix_inverse, Matrix};
+use crate::util::vector::int_mod;
 
 pub fn row_reduce_form(m: &mut Matrix, mod_val: &Integer) -> (Matrix, Vec<usize>, i32) {
     let n_rows = m.rows();
@@ -140,7 +139,7 @@ pub fn row_reduce_form_integer(m: &mut Matrix) -> (Matrix, Vec<usize>, i32) {
     (row_ops_matrix, pivot_vec, rank)
 }
 
-pub fn sample_h(dim: usize, k: usize, bound: &Integer, modulo: &Integer, rng: &mut RandState<'_>) -> (Matrix, Matrix) {
+pub fn sample_h(dim: usize, k: usize, _bound: &Integer, modulo: &Integer, rng: &mut RandState<'_>) -> (Matrix, Matrix) {
     // mat_u: k x (dim + k) matrix: id_k || 0_{dim x k}
     // let mut mat_u = Matrix::get_identity(k);
     // let mat_v = Matrix::new(k, dim);
@@ -148,33 +147,27 @@ pub fn sample_h(dim: usize, k: usize, bound: &Integer, modulo: &Integer, rng: &m
 
     // println!("mat_u : {}", mat_u);
     let mut mat_u: Matrix;
-    let mut row_ops: Matrix;
     let mut pivot_vec: Vec<usize>;
     loop {
-        // create random permutation vector of size (dim + k)
-        let mut perm = (0..dim+k).collect::<Vec<usize>>();
-        perm.shuffle(&mut rand::thread_rng());
-        // println!("perm : {:?}", perm);
+        // // create random permutation vector of size (dim + k)
+        // let mut perm = (0..dim+k).collect::<Vec<usize>>();
+        // perm.shuffle(&mut rand::thread_rng());
+        // // println!("perm : {:?}", perm);
 
-        // create permutation matrix mat_u
-        // entry is +-1 in random
-        mat_u = Matrix::new(k, dim + k);
-        for j in 0..k {
-            let val = 2 * Integer::from(2).random_below(rng) - 1;
-            mat_u.set(j, perm[j], val);
-        }
+        // // create permutation matrix mat_u
+        // // entry is +-1 in random
+        // mat_u = Matrix::new(k, dim + k);
+        // for j in 0..k {
+        //     let val = 2 * Integer::from(2).random_below(rng) - 1;
+        //     mat_u.set(j, perm[j], val);
+        // }
         
-        // mat_u = Matrix::random(k, dim + k, bound, rng);
-        println!("mat_u : {}", mat_u);
-        (row_ops, pivot_vec, _) = row_reduce_form(&mut mat_u.transpose(), modulo);
-        println!("pivot_vec.len() = {}", pivot_vec.len());
+        mat_u = Matrix::random_signed(k, dim + k, &Integer::from(1), rng);
+        (_, pivot_vec, _) = row_reduce_form(&mut mat_u.transpose(), modulo);
         if pivot_vec.len() == k {
             break;
         }
     }
-    println!("row_ops : {}", row_ops);
-    println!("pivot_vec : {:?}", pivot_vec);
-    println!("mat_u = \n{}", mat_u);
     // Compute the left null space of mat_u
     let mut null_space = Matrix::new(mat_u.cols(), mat_u.cols() - mat_u.rows());
 
@@ -190,7 +183,6 @@ pub fn sample_h(dim: usize, k: usize, bound: &Integer, modulo: &Integer, rng: &m
                 if pivot >= col {
                     break;
                 }
-                println!("pivot = {}, col = {}", pivot, col);
                 let val = mat_u.get(idx, col);
                 let val_neg = val.clone() * Integer::from(-1);
                 null_space.set(pivot, free_var_index, val_neg);
@@ -201,24 +193,12 @@ pub fn sample_h(dim: usize, k: usize, bound: &Integer, modulo: &Integer, rng: &m
         // println!("col = {}, free_var_index = {}", col, free_var_index);
         // println!("null_space : {}", null_space);
     }
-
-    println!("null_space : \n{}", null_space);
-
-    println!("test null space");
-    println!("mat_u * null_space = {}", mat_u.clone() * null_space.clone());
-
-    let mat_u = mat_u.transpose();
     let mat_v = null_space.transpose();
-
-    println!("test v * u");
-    let mut mul = mat_v.clone() * mat_u.clone();
-    mul.mod_inplace(modulo);
-    println!("v * u = {}", mul);
 
     // fix lambda = 128
     // B_h >= 2^{lambda/(dim * k) - 1}
     let bound_h = Integer::from(2).pow(128 / (dim * k) as u32 - 1);
-    println!("bound_h = {}", bound_h);
+    // println!("bound_h = {}", bound_h);
     let mat_t: Matrix;
     let mut mat_h: Matrix;
     loop {
