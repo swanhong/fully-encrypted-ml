@@ -1,10 +1,10 @@
 <p align="center">
-    <h1 align="center">ComposableFE-rs</h1>
+    <h1 align="center">Fully-Encrypted-ML</h1>
 </p>
 
 ## Overview
 
-This repository contains the `Rust` implementation of the scheme suggested in the paper "Fully Encrypted Machine Learning Protocol using Functional Encryption," which is currently under review.
+This repository contains the `Rust` implementation of the scheme proposed in the paper *"Non-Interactive Fully Encrypted Machine Learning Protocol for Inference,"* which is currently under review.
 
 ## Build
 Our code is written in Rust, so it only depends on Rust. After installing Rust, run the following command:
@@ -16,7 +16,7 @@ Our code is written in Rust, so it only depends on Rust. After installing Rust, 
 ## Run
 
 ### Test
-To test the code, run following command:
+To test the code, run the following command:
 ```bash
     ./target/debug/fe -t protocol
 ```
@@ -31,7 +31,7 @@ The target option `protocol` runs the protocol with a random message and evaluat
 The arguments are as follows:
 	- `--t`: Specifies the target option. In this case, it's protocol.
 	- `--bit-len`: The bit length of primes used for the DCR group. To ensure 128-bit security, this parameter should be chosen as 3072. Option: (10, 100, 3072)
-	- `--dim`: The dimensions. first input set the input dimension, and the next inputs set the following dimentions
+	- `--dim`: The dimensions. first input set the input dimension, and the next inputs set the following dimensions
 	- `--n-decomp`: Decomposition parameter
 
 ### Run ML with UCI datasets
